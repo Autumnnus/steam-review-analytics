@@ -105,15 +105,22 @@ if (UMAMI_BASE_URL) {
     const clientIp = resolveClientIp(c);
     const incomingXForwardedFor = c.req.header("x-forwarded-for") || "";
     const forwardedForHeader = incomingXForwardedFor || clientIp;
+    const proxyHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "User-Agent": c.req.header("user-agent") || "",
+    };
+
+    if (forwardedForHeader) {
+      proxyHeaders["X-Forwarded-For"] = forwardedForHeader;
+    }
+    if (clientIp) {
+      proxyHeaders["X-Real-IP"] = clientIp;
+      proxyHeaders["CF-Connecting-IP"] = clientIp;
+    }
+
     const res = await fetch(`${UMAMI_BASE_URL}/api/x`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": c.req.header("user-agent") || "",
-        "X-Forwarded-For": forwardedForHeader,
-        "X-Real-IP": clientIp,
-        "CF-Connecting-IP": clientIp,
-      },
+      headers: proxyHeaders,
       body,
     });
     const responseBody = await res.text();
