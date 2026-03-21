@@ -1,4 +1,4 @@
-export const PORT = Number(Bun.env.PORT ?? 3000);
+export const PORT = Number(Bun.env.PORT ?? 3010);
 export const CACHE_TTL_MS = Number(Bun.env.CACHE_TTL_MS ?? 60 * 60 * 1000);
 export const STORE_LANGUAGE = Bun.env.STORE_LANGUAGE ?? "english";
 export const APP_ORIGIN = Bun.env.APP_ORIGIN?.trim() || "";
@@ -6,8 +6,18 @@ export const APP_ORIGIN = Bun.env.APP_ORIGIN?.trim() || "";
 export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "arabic", label: "Arabic", flag: "🇸🇦", aliases: ["arabic"] },
   { id: "bulgarian", label: "Bulgarian", flag: "🇧🇬", aliases: ["bulgarian"] },
-  { id: "schinese", label: "Simplified Chinese", flag: "🇨🇳", aliases: ["simplified chinese", "schinese"] },
-  { id: "tchinese", label: "Traditional Chinese", flag: "🇹🇼", aliases: ["traditional chinese", "tchinese"] },
+  {
+    id: "schinese",
+    label: "Simplified Chinese",
+    flag: "🇨🇳",
+    aliases: ["simplified chinese", "schinese"],
+  },
+  {
+    id: "tchinese",
+    label: "Traditional Chinese",
+    flag: "🇹🇼",
+    aliases: ["traditional chinese", "tchinese"],
+  },
   { id: "czech", label: "Czech", flag: "🇨🇿", aliases: ["czech"] },
   { id: "danish", label: "Danish", flag: "🇩🇰", aliases: ["danish"] },
   { id: "dutch", label: "Dutch", flag: "🇳🇱", aliases: ["dutch"] },
@@ -17,23 +27,58 @@ export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "german", label: "German", flag: "🇩🇪", aliases: ["german"] },
   { id: "greek", label: "Greek", flag: "🇬🇷", aliases: ["greek"] },
   { id: "hungarian", label: "Hungarian", flag: "🇭🇺", aliases: ["hungarian"] },
-  { id: "indonesian", label: "Indonesian", flag: "🇮🇩", aliases: ["indonesian"] },
+  {
+    id: "indonesian",
+    label: "Indonesian",
+    flag: "🇮🇩",
+    aliases: ["indonesian"],
+  },
   { id: "italian", label: "Italian", flag: "🇮🇹", aliases: ["italian"] },
   { id: "japanese", label: "Japanese", flag: "🇯🇵", aliases: ["japanese"] },
-  { id: "koreana", label: "Korean", flag: "🇰🇷", aliases: ["korean", "koreana"] },
-  { id: "latam", label: "Spanish - Latin America", flag: "🌎", aliases: ["spanish - latin america", "latam"] },
+  {
+    id: "koreana",
+    label: "Korean",
+    flag: "🇰🇷",
+    aliases: ["korean", "koreana"],
+  },
+  {
+    id: "latam",
+    label: "Spanish - Latin America",
+    flag: "🌎",
+    aliases: ["spanish - latin america", "latam"],
+  },
   { id: "norwegian", label: "Norwegian", flag: "🇳🇴", aliases: ["norwegian"] },
   { id: "polish", label: "Polish", flag: "🇵🇱", aliases: ["polish"] },
-  { id: "portuguese", label: "Portuguese - Portugal", flag: "🇵🇹", aliases: ["portuguese - portugal", "portuguese"] },
-  { id: "brazilian", label: "Portuguese - Brazil", flag: "🇧🇷", aliases: ["portuguese - brazil", "brazilian"] },
+  {
+    id: "portuguese",
+    label: "Portuguese - Portugal",
+    flag: "🇵🇹",
+    aliases: ["portuguese - portugal", "portuguese"],
+  },
+  {
+    id: "brazilian",
+    label: "Portuguese - Brazil",
+    flag: "🇧🇷",
+    aliases: ["portuguese - brazil", "brazilian"],
+  },
   { id: "romanian", label: "Romanian", flag: "🇷🇴", aliases: ["romanian"] },
   { id: "russian", label: "Russian", flag: "🇷🇺", aliases: ["russian"] },
-  { id: "spanish", label: "Spanish - Spain", flag: "🇪🇸", aliases: ["spanish - spain", "spanish"] },
+  {
+    id: "spanish",
+    label: "Spanish - Spain",
+    flag: "🇪🇸",
+    aliases: ["spanish - spain", "spanish"],
+  },
   { id: "swedish", label: "Swedish", flag: "🇸🇪", aliases: ["swedish"] },
   { id: "thai", label: "Thai", flag: "🇹🇭", aliases: ["thai"] },
   { id: "turkish", label: "Turkish", flag: "🇹🇷", aliases: ["turkish"] },
   { id: "ukrainian", label: "Ukrainian", flag: "🇺🇦", aliases: ["ukrainian"] },
-  { id: "vietnamese", label: "Vietnamese", flag: "🇻🇳", aliases: ["vietnamese"] },
+  {
+    id: "vietnamese",
+    label: "Vietnamese",
+    flag: "🇻🇳",
+    aliases: ["vietnamese"],
+  },
 ] as const;
 
 export const LANGUAGE_LABELS = new Map<string, string>(
@@ -41,7 +86,9 @@ export const LANGUAGE_LABELS = new Map<string, string>(
 );
 
 export const LANGUAGE_ALIAS_TO_ID = new Map<string, string>(
-  STEAM_LANGUAGE_DEFINITIONS.flatMap((option) => option.aliases.map((alias) => [alias, option.id] as const)),
+  STEAM_LANGUAGE_DEFINITIONS.flatMap((option) =>
+    option.aliases.map((alias) => [alias, option.id] as const),
+  ),
 );
 
 export const DEFAULT_SELECTED_LANGUAGE_IDS = [

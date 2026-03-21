@@ -24,7 +24,7 @@ cp .env.example .env
 bun run dev
 ```
 
-Uygulama varsayilan olarak `http://localhost:3000` adresinde acilir.
+Uygulama varsayilan olarak `http://localhost:3010` adresinde acilir.
 
 ## Endpointler
 
@@ -43,5 +43,5 @@ Uygulama varsayilan olarak `http://localhost:3000` adresinde acilir.
 
 ```bash
 docker build -t steam-review-analytics .
-docker run --rm -p 3000:3000 --env-file .env steam-review-analytics
+docker run --rm -p 3010:3010 --env-file .env steam-review-analytics
 ```
