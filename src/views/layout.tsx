@@ -232,23 +232,23 @@ export const Layout: FC<LayoutProps> = ({
             const ratio = hasData ? Math.round((item.positive / item.totalReviews) * 100) : 0;
             const reviewWidth = hasData && maxReviewsVal > 0 ? Math.round((item.totalReviews / maxReviewsVal) * 100) : 0;
             const isRatioSort = sortState.col === 'ratio';
-            const ratioBarColor = ratio >= 80 ? 'bg-emerald-500' : ratio >= 60 ? 'bg-lime-400' : ratio >= 40 ? 'bg-amber-400' : 'bg-rose-500';
-            const reviewBarColor = reviewWidth >= 80 ? 'bg-sky-400' : reviewWidth >= 50 ? 'bg-sky-500' : 'bg-sky-600';
-            const reviewTextColor = reviewWidth >= 80 ? 'text-sky-300' : reviewWidth >= 50 ? 'text-sky-400' : 'text-sky-500';
+            const ratioBarColor = ratio >= 80 ? '#10b981' : ratio >= 60 ? '#a3e635' : ratio >= 40 ? '#fbbf24' : '#f43f5e';
+            const reviewBarColor = reviewWidth >= 80 ? '#38bdf8' : reviewWidth >= 50 ? '#0ea5e9' : '#0284c7';
+            const reviewTextColor = reviewWidth >= 80 ? '#7dd3fc' : reviewWidth >= 50 ? '#38bdf8' : '#0ea5e9';
             const barColor = isRatioSort ? ratioBarColor : reviewBarColor;
             const barWidth = isRatioSort ? ratio : reviewWidth;
-            const ratioTextColor = ratio >= 80 ? 'text-emerald-300' : ratio >= 60 ? 'text-lime-300' : ratio >= 40 ? 'text-amber-300' : 'text-rose-300';
+            const ratioTextColor = ratio >= 80 ? '#6ee7b7' : ratio >= 60 ? '#bef264' : ratio >= 40 ? '#fcd34d' : '#fda4af';
             const isCrownRatio = hasData && Math.abs(item.positive / item.totalReviews - maxRatioVal) < 1e-9;
             const isCrownReviews = hasData && item.totalReviews === maxReviewsVal;
             const primaryMetricHtml = hasData
               ? (isRatioSort
                 ? \`\${ratio}%\${isCrownRatio ? crown : ''}\`
-                : \`<span class="\${reviewTextColor}">\${item.totalReviews.toLocaleString('en-US')}</span>\${isCrownReviews ? crown : ''}\`)
+                : \`<span style="color:\${reviewTextColor}">\${item.totalReviews.toLocaleString('en-US')}</span>\${isCrownReviews ? crown : ''}\`)
               : '—';
             const secondaryMetricHtml = hasData
               ? (isRatioSort
                 ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews</span>\`
-                : \`<span class="inline-flex items-center text-sm font-mono tabular-nums \${ratioTextColor}">\${ratio}% positive</span>\`)
+                : \`<span class="inline-flex items-center text-sm font-mono tabular-nums" style="color:\${ratioTextColor}">\${ratio}% positive</span>\`)
               : \`<span class="text-sm text-mist/30">No reviews</span>\`;
             const flagText = item.flag ? item.flag + ' ' : '';
             return \`<div class="rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-3">
@@ -257,7 +257,7 @@ export const Layout: FC<LayoutProps> = ({
                 <div class="shrink-0 font-mono text-xs text-mist/55">\${primaryMetricHtml}</div>
               </div>
               <div class="mt-2 flex items-center gap-2 min-w-0">
-                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full \${barColor}" style="width:\${barWidth}%"></div>\` : ''}</div>
+                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full" style="width:\${barWidth}%;background-color:\${barColor}"></div>\` : ''}</div>
               </div>
               <div class="mt-2 text-left">\${secondaryMetricHtml}</div>
             </div>\`;
@@ -548,13 +548,10 @@ export const Layout: FC<LayoutProps> = ({
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         {hasUmami ? (
           umamiProxied ? (
-            <script
-              defer
-              data-website-id={UMAMI_WEBSITE_ID}
-              data-host-url={SITE_URL}
-              data-api-route="/ux/collect"
-              src="/ux/tracker.js"
-            />
+            // Dynamically inject tracker to avoid ad blocker element-selector rules (e.g. script[data-website-id])
+            <script dangerouslySetInnerHTML={{ __html:
+              `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.defer=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');s.setAttribute('data-host-url','${SITE_URL}');s.setAttribute('data-api-route','/ux/collect');document.head.appendChild(s);})();`
+            }} />
           ) : (
             <script
               defer

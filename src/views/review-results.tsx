@@ -220,34 +220,34 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
               const isRatioSort = false;
               const ratioBarColor =
                 positiveRatio >= 80
-                  ? "bg-emerald-500"
+                  ? "#10b981"
                   : positiveRatio >= 60
-                    ? "bg-lime-400"
+                    ? "#a3e635"
                     : positiveRatio >= 40
-                      ? "bg-amber-400"
-                      : "bg-rose-500";
+                      ? "#fbbf24"
+                      : "#f43f5e";
               const reviewBarColor =
                 reviewWidth >= 80
-                  ? "bg-sky-400"
+                  ? "#38bdf8"
                   : reviewWidth >= 50
-                    ? "bg-sky-500"
-                    : "bg-sky-600";
+                    ? "#0ea5e9"
+                    : "#0284c7";
               const reviewTextColor =
                 reviewWidth >= 80
-                  ? "text-sky-300"
+                  ? "#7dd3fc"
                   : reviewWidth >= 50
-                    ? "text-sky-400"
-                    : "text-sky-500";
+                    ? "#38bdf8"
+                    : "#0ea5e9";
               const barColor = isRatioSort ? ratioBarColor : reviewBarColor;
               const barWidth = isRatioSort ? positiveRatio : reviewWidth;
               const ratioTextColor =
                 positiveRatio >= 80
-                  ? "text-emerald-300"
+                  ? "#6ee7b7"
                   : positiveRatio >= 60
-                    ? "text-lime-300"
+                    ? "#bef264"
                     : positiveRatio >= 40
-                      ? "text-amber-300"
-                      : "text-rose-300";
+                      ? "#fcd34d"
+                      : "#fda4af";
               const isCrownReviews = hasData && totalReviews === maxReviewsVal;
 
               return (
@@ -258,7 +258,7 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
                     </div>
                     <div class="shrink-0 font-mono text-xs">
                       {hasData ? (
-                        <span class={reviewTextColor}>
+                        <span style={`color:${reviewTextColor}`}>
                           {formatNumber.format(totalReviews)}
                         </span>
                       ) : (
@@ -275,15 +275,17 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
                     <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                       {hasData ? (
                         <div
-                          class={`h-full rounded-full ${barColor}`}
-                          style={`width:${barWidth}%`}
+                          class="h-full rounded-full"
+                          style={`width:${barWidth}%;background-color:${barColor}`}
                         ></div>
                       ) : null}
                     </div>
                   </div>
                   <div class="mt-2 text-left font-mono text-sm tabular-nums">
                     {hasData ? (
-                      <span class={ratioTextColor}>{positiveRatio}% positive</span>
+                      <span style={`color:${ratioTextColor}`}>
+                        {positiveRatio}% positive
+                      </span>
                     ) : (
                       <span class="text-mist/30">No reviews</span>
                     )}
