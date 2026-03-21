@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { jsxRenderer } from "hono/jsx-renderer";
 import { logger } from "hono/logger";
@@ -15,6 +16,23 @@ import { pageRoutes } from "./routes/pages";
 import { Layout } from "./views/layout";
 
 export const app = new Hono();
+
+const resolveClientIp = (c: Context) => {
+  const cfConnectingIp = (c.req.header("cf-connecting-ip") || "").trim();
+  if (cfConnectingIp) return cfConnectingIp;
+
+  const trueClientIp = (c.req.header("true-client-ip") || "").trim();
+  if (trueClientIp) return trueClientIp;
+
+  const xRealIp = (c.req.header("x-real-ip") || "").trim();
+  if (xRealIp) return xRealIp;
+
+  const xForwardedFor = (c.req.header("x-forwarded-for") || "")
+    .split(",")
+    .map((value: string) => value.trim())
+    .filter(Boolean);
+  return xForwardedFor[0] || "";
+};
 
 // Analytics endpoints: max 10 requests/min per IP (each triggers ~30 Steam requests)
 const analyticsRateLimit = createRateLimiter(10, 60_000);
@@ -84,16 +102,17 @@ if (UMAMI_SCRIPT_URL) {
 if (UMAMI_BASE_URL) {
   app.post("/api/x", async (c) => {
     const body = await c.req.text();
+    const clientIp = resolveClientIp(c);
+    const incomingXForwardedFor = c.req.header("x-forwarded-for") || "";
+    const forwardedForHeader = incomingXForwardedFor || clientIp;
     const res = await fetch(`${UMAMI_BASE_URL}/api/x`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "User-Agent": c.req.header("user-agent") || "",
-        "X-Forwarded-For":
-          c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "",
-        "X-Real-IP":
-          c.req.header("x-real-ip") ||
-          ((c.req.header("x-forwarded-for") || "").split(",")[0] ?? "").trim(),
+        "X-Forwarded-For": forwardedForHeader,
+        "X-Real-IP": clientIp,
+        "CF-Connecting-IP": clientIp,
       },
       body,
     });
