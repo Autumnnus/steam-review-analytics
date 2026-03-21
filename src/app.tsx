@@ -1,13 +1,18 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { jsxRenderer } from "hono/jsx-renderer";
-import { APP_ORIGIN, SITE_URL, UMAMI_SCRIPT_URL, UMAMI_BASE_URL } from "./config";
+import { logger } from "hono/logger";
+import {
+  APP_ORIGIN,
+  SITE_URL,
+  UMAMI_BASE_URL,
+  UMAMI_SCRIPT_URL,
+} from "./config";
+import { createRateLimiter } from "./middleware/rate-limit";
 import { apiRoutes } from "./routes/api";
 import { pageRoutes } from "./routes/pages";
 import { Layout } from "./views/layout";
-import { createRateLimiter } from "./middleware/rate-limit";
 
 export const app = new Hono();
 
@@ -79,9 +84,10 @@ if (UMAMI_BASE_URL) {
         "Content-Type": "application/json",
         "User-Agent": c.req.header("user-agent") || "",
         "X-Forwarded-For":
-          c.req.header("x-forwarded-for") ||
+          c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "",
+        "X-Real-IP":
           c.req.header("x-real-ip") ||
-          "",
+          (c.req.header("x-forwarded-for") || "").split(",")[0].trim(),
       },
       body,
     });
