@@ -1,4 +1,4 @@
-# steam-review-analytics
+# Steam Review Analytics
 
 A Bun + Hono app that shows language-based review statistics for Steam games.
 
@@ -67,14 +67,3 @@ docker run --rm -p 3010:3010 --env-file .env steam-review-analytics
 ```
 
 The Docker image starts Redis and the Bun app in the same container, so no separate Redis service is required.
-
-## SEO Deployment Checklist
-
-- Verify the site in Google Search Console.
-- Submit `https://yourdomain.com/sitemap.xml` in Search Console.
-- Choose one canonical domain strategy (`www` or non-`www`) and redirect the other.
-- Request indexing for the home page after deployment.
-
-## Support
-
-For support, visit: https://github.com/Autumnnus/steam-review-analytics
