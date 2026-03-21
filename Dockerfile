@@ -15,4 +15,7 @@ ENV NODE_ENV=production
 ENV REDIS_URL=redis://127.0.0.1:6379
 EXPOSE 3010
 
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3010/ || exit 1
+
 CMD ["/app/docker-entrypoint.sh"]

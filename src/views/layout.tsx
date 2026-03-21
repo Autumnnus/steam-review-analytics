@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { FC, PropsWithChildren } from "hono/jsx";
-import { STEAM_LANGUAGE_DEFINITIONS } from "../config";
+import { STEAM_LANGUAGE_DEFINITIONS, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from "../config";
 
 type LayoutProps = PropsWithChildren<{
   title?: string;
@@ -10,6 +10,7 @@ export const Layout: FC<LayoutProps> = ({
   children,
   title = "Steam Review Analytics",
 }) => {
+  const hasUmami = Boolean(UMAMI_SCRIPT_URL && UMAMI_WEBSITE_ID);
   const languageLabels = JSON.stringify(
     Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.label])),
   ).replace(/</g, "\\u003c");
@@ -21,6 +22,12 @@ export const Layout: FC<LayoutProps> = ({
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
     window.lastReviewSortState = window.lastReviewSortState || { col: 'reviews', dir: 'desc' };
+    window.trackEvent = (name, data = {}) => {
+      if (!(window.umami && typeof window.umami.track === 'function')) return;
+      try {
+        window.umami.track(name, data);
+      } catch (_) {}
+    };
     window.reviewLanguageLabels = ${languageLabels};
     window.reviewLanguageFlags = ${languageFlags};
     window.renderCachedGameCard = (game) => {
@@ -370,6 +377,7 @@ export const Layout: FC<LayoutProps> = ({
         const appName = suggestion.getAttribute('data-app-name') || '';
         const imageUrl = suggestion.getAttribute('data-app-image-url') || '';
         window.selectGame(appId, appName);
+        window.trackEvent('search_select_game', { source: 'suggestion', appId });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -386,6 +394,7 @@ export const Layout: FC<LayoutProps> = ({
         const appId = cachedGame.getAttribute('data-app-id') || '';
         const appName = cachedGame.getAttribute('data-app-name') || '';
         window.selectGame(appId, appName);
+        window.trackEvent('search_select_game', { source: 'recent_games', appId });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -437,7 +446,12 @@ export const Layout: FC<LayoutProps> = ({
         event.preventDefault();
         searchInput.setCustomValidity('Select a game from the autocomplete list.');
         searchInput.reportValidity();
+        return;
       }
+      window.trackEvent('analyze_submit', {
+        appId: appIdInput ? appIdInput.value : '',
+        selectedLanguageCount: window.getSelectedLanguages().length,
+      });
     });
     document.addEventListener('DOMContentLoaded', () => {
       window.syncLanguageCount();
@@ -460,6 +474,15 @@ export const Layout: FC<LayoutProps> = ({
         results.style.transition = '';
       }
       window.hydrateReviewResults(event.target);
+      if (
+        event.detail &&
+        event.detail.target &&
+        event.detail.target.id === 'results' &&
+        event.detail.target.querySelector('[data-review-scope]')
+      ) {
+        const appIdInput = document.querySelector('[data-app-id-input="true"]');
+        window.trackEvent('analyze_success', { appId: appIdInput ? appIdInput.value : '' });
+      }
     });
   `;
 
@@ -508,6 +531,13 @@ export const Layout: FC<LayoutProps> = ({
         />
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        {hasUmami ? (
+          <script
+            defer
+            data-website-id={UMAMI_WEBSITE_ID}
+            src={UMAMI_SCRIPT_URL}
+          />
+        ) : null}
         <style>{`
           *, *::before, *::after {
             box-sizing: border-box;

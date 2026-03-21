@@ -6,6 +6,8 @@ export const STORE_LANGUAGE = Bun.env.STORE_LANGUAGE ?? "english";
 export const APP_ORIGIN = Bun.env.APP_ORIGIN?.trim() || "";
 export const SITE_URL =
   Bun.env.SITE_URL?.trim().replace(/\/+$/, "") || `http://localhost:${PORT}`;
+export const UMAMI_SCRIPT_URL = Bun.env.UMAMI_SCRIPT_URL?.trim() || "";
+export const UMAMI_WEBSITE_ID = Bun.env.UMAMI_WEBSITE_ID?.trim() || "";
 
 export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "arabic", label: "Arabic", flag: "🇸🇦", aliases: ["arabic"] },

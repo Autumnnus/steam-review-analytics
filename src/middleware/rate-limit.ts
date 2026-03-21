@@ -5,9 +5,18 @@ interface WindowEntry {
   resetAt: number;
 }
 
-const getClientIp = (c: Context): string =>
-  c.req.header("x-real-ip") ??
-  "unknown";
+const getClientIp = (c: Context): string => {
+  const forwardedFor = c.req.header("x-forwarded-for");
+  if (forwardedFor) {
+    const [firstIp] = forwardedFor
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (firstIp) return firstIp;
+  }
+
+  return c.req.header("x-real-ip") ?? "unknown";
+};
 
 export const createRateLimiter = (maxRequests: number, windowMs: number) => {
   const windows = new Map<string, WindowEntry>();
