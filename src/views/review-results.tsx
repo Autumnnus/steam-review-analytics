@@ -45,9 +45,9 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
     if (!hasA && !hasB) return 0;
     if (!hasA) return 1;
     if (!hasB) return -1;
-    if (lb!.positiveRatio !== la!.positiveRatio)
-      return lb!.positiveRatio - la!.positiveRatio;
-    return lb!.totalReviews - la!.totalReviews;
+    if (lb!.totalReviews !== la!.totalReviews)
+      return lb!.totalReviews - la!.totalReviews;
+    return lb!.positiveRatio - la!.positiveRatio;
   });
   const langWithData = analytics.languages.filter((l) => l.totalReviews > 0);
   const maxRatioVal = langWithData.length
@@ -168,17 +168,17 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
               type="button"
               data-sort-col="ratio"
               data-scope={scopeId}
-              class="inline-flex items-center rounded-full border border-sky/40 bg-sky/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-sky"
+              class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-mist/55"
             >
-              Ratio %<span data-sort-indicator> ↓</span>
+              Ratio %<span data-sort-indicator></span>
             </button>
             <button
               type="button"
               data-sort-col="reviews"
               data-scope={scopeId}
-              class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-mist/55"
+              class="inline-flex items-center rounded-full border border-sky/40 bg-sky/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-sky"
             >
-              Reviews<span data-sort-indicator></span>
+              Reviews<span data-sort-indicator> ↓</span>
             </button>
           </div>
           <div
@@ -192,16 +192,16 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
             <button
               data-sort-col="ratio"
               data-scope={scopeId}
-              class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-sky cursor-pointer select-none transition-colors"
+              class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-mist/40 cursor-pointer select-none transition-colors"
             >
-              Positive ratio %<span data-sort-indicator> ↓</span>
+              Positive ratio %<span data-sort-indicator></span>
             </button>
             <button
               data-sort-col="reviews"
               data-scope={scopeId}
-              class="flex items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest text-mist/40 hover:text-mist/70 cursor-pointer select-none transition-colors"
+              class="flex items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest text-sky cursor-pointer select-none transition-colors"
             >
-              Reviews<span data-sort-indicator></span>
+              Reviews<span data-sort-indicator> ↓</span>
             </button>
           </div>
           <div id={`${scopeId}-breakdown`} class="space-y-1">

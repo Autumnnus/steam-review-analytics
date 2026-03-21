@@ -17,7 +17,7 @@ export const Layout: FC<LayoutProps> = ({
     window.reviewCharts = window.reviewCharts || new Map();
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
-    window.lastReviewSortState = window.lastReviewSortState || { col: 'ratio', dir: 'desc' };
+    window.lastReviewSortState = window.lastReviewSortState || { col: 'reviews', dir: 'desc' };
     window.reviewLanguageLabels = ${languageLabels};
     window.renderCachedGameCard = (game) => {
       const button = document.createElement('button');
@@ -165,7 +165,7 @@ export const Layout: FC<LayoutProps> = ({
       const breakdownNode = document.getElementById(\`\${scope}-breakdown\`);
       if (reviewTotalNode) reviewTotalNode.textContent = filteredPayload.totals.totalReviews.toLocaleString('en-US');
       if (positiveShareNode) positiveShareNode.textContent = filteredPayload.totals.positiveRatio + '%';
-      const sortState = window.reviewSortStates.get(scope) || { col: 'ratio', dir: 'desc' };
+      const sortState = window.reviewSortStates.get(scope) || { col: 'reviews', dir: 'desc' };
       const sortControlNodes = document.querySelectorAll(\`[data-scope="\${scope}"][data-sort-col]\`);
       if (sortControlNodes.length) {
         sortControlNodes.forEach((btn) => {
@@ -388,7 +388,7 @@ export const Layout: FC<LayoutProps> = ({
       const col = btn.getAttribute('data-sort-col');
       const scope = btn.getAttribute('data-scope');
       if (!col || !scope) return;
-      const current = window.reviewSortStates.get(scope) || { col: 'ratio', dir: 'desc' };
+      const current = window.reviewSortStates.get(scope) || { col: 'reviews', dir: 'desc' };
       const newDir = current.col === col ? (current.dir === 'desc' ? 'asc' : 'desc') : 'desc';
       const newSortState = { col, dir: newDir };
       window.reviewSortStates.set(scope, newSortState);
