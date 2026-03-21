@@ -1,5 +1,5 @@
 /** @jsxImportSource hono/jsx */
-import { STEAM_LANGUAGE_DEFINITIONS } from "../config";
+import { DEFAULT_SELECTED_LANGUAGE_IDS, STEAM_LANGUAGE_DEFINITIONS } from "../config";
 import type { ReviewAnalytics } from "../types/steam";
 
 const formatNumber = new Intl.NumberFormat("en-US");
@@ -17,18 +17,39 @@ type ReviewResultsProps = {
 
 export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
   const scopeId = `review-${analytics.appId}`;
-  const chartHeight = Math.max(260, analytics.languages.length * 34);
+  const chartHeight = Math.max(280, DEFAULT_SELECTED_LANGUAGE_IDS.length * 30);
+  const themeImage = analytics.game.headerImage || analytics.game.capsuleImage;
   const payload = safeJsonForScript({
     totals: analytics.totals,
     languages: analytics.languages,
   });
   const languageMap = new Map(analytics.languages.map((language) => [language.language, language]));
+  const sortedDefinitions = [...STEAM_LANGUAGE_DEFINITIONS].sort((a, b) => {
+    const la = languageMap.get(a.id);
+    const lb = languageMap.get(b.id);
+    const hasA = la && la.totalReviews > 0;
+    const hasB = lb && lb.totalReviews > 0;
+    if (!hasA && !hasB) return 0;
+    if (!hasA) return 1;
+    if (!hasB) return -1;
+    return lb!.positive / lb!.totalReviews - la!.positive / la!.totalReviews;
+  });
+  const langWithData = analytics.languages.filter((l) => l.totalReviews > 0);
+  const maxRatioVal = langWithData.length ? Math.max(...langWithData.map((l) => l.positive / l.totalReviews)) : -1;
+  const maxReviewsVal = langWithData.length ? Math.max(...langWithData.map((l) => l.totalReviews)) : -1;
 
   return (
     <div class="space-y-6" data-review-scope={scopeId} data-review-payload={payload}>
-      <section class="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-panel backdrop-blur">
+      <section class="relative overflow-hidden rounded-[2rem] border border-white/10 shadow-panel">
+        {themeImage ? (
+          <div
+            class="absolute inset-0 scale-105 bg-cover bg-center opacity-35 blur-2xl"
+            style={`background-image:url('${themeImage}')`}
+          />
+        ) : null}
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_28rem),radial-gradient(circle_at_top_right,rgba(249,115,22,0.22),transparent_30rem),linear-gradient(135deg,rgba(9,10,12,0.82),rgba(15,18,24,0.9))]" />
         <div class="grid gap-0 lg:grid-cols-[1.2fr,0.8fr]">
-          <div class="space-y-5 p-5 sm:p-6">
+          <div class="relative space-y-5 p-5 sm:p-6">
             <div class="flex flex-wrap items-start gap-4">
               <img
                 src={analytics.game.capsuleImage || analytics.game.headerImage}
@@ -68,17 +89,13 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
             </div>
           </div>
 
-          <aside class="border-t border-white/10 bg-ink/60 p-5 lg:border-l lg:border-t-0">
-            <div class="font-mono text-xs uppercase tracking-[0.24em] text-mist/55">Selected languages</div>
-            <div id={`${scopeId}-selected-languages`} class="mt-4 flex flex-wrap gap-2">
-              {analytics.languages.map((language) => (
-                <span class="rounded-full border border-sky/25 bg-sky/10 px-3 py-1 text-sm text-sky">
-                  {language.label}
-                </span>
-              ))}
+          <aside class="relative border-t border-white/10 bg-black/25 p-5 backdrop-blur-sm lg:border-l lg:border-t-0">
+            <div class="mb-4">
+              <h3 class="text-xl font-semibold text-white">Positive vs negative</h3>
+              <p class="text-sm text-mist/65">Combined sentiment split.</p>
             </div>
-            <div class="mt-6 text-sm leading-7 text-mist/70">
-              Selected languages stay visible even if the game has no review data for one of them.
+            <div style="height:280px">
+              <canvas id={`${scopeId}-sentiment`}></canvas>
             </div>
             <a
               href={analytics.game.steamUrl}
@@ -92,79 +109,98 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
         </div>
       </section>
 
-      <section class="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-        <div class="grid gap-6">
-          <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
-            <div class="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <h3 class="text-xl font-semibold text-white">Review volume by language</h3>
-                <p class="text-sm text-mist/65">How total review count is distributed across supported languages.</p>
-              </div>
-            </div>
-            <div style={`height:${chartHeight}px`}>
-              <canvas id={`${scopeId}-reviews`}></canvas>
-            </div>
-          </div>
+      <section class="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
+        {themeImage ? (
+          <div
+            class="absolute inset-0 bg-cover bg-center opacity-[0.08]"
+            style={`background-image:url('${themeImage}')`}
+          />
+        ) : null}
+        <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.16))]" />
+        <div class="relative">
+        <div class="mb-4">
+          <h3 class="text-xl font-semibold text-white">Language breakdown</h3>
+          <p class="text-sm text-mist/65">Positive ratio and review count per language.</p>
+        </div>
+        <div id={`${scopeId}-breakdown-header`} class="mb-2 grid items-center gap-x-3 px-3" style="grid-template-columns: minmax(0,1fr) minmax(0,2fr) 4.5rem">
+          <div class="font-mono text-[10px] uppercase tracking-widest text-mist/40">Language</div>
+          <button data-sort-col="ratio" data-scope={scopeId} class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-sky cursor-pointer select-none transition-colors">
+            Positive ratio<span data-sort-indicator> ↓</span>
+          </button>
+          <button data-sort-col="reviews" data-scope={scopeId} class="flex items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest text-mist/40 hover:text-mist/70 cursor-pointer select-none transition-colors">
+            Reviews<span data-sort-indicator></span>
+          </button>
+        </div>
+        <div id={`${scopeId}-breakdown`} class="space-y-1">
+          {sortedDefinitions.map((definition) => {
+            const language = languageMap.get(definition.id);
+            const totalReviews = language?.totalReviews ?? 0;
+            const positive = language?.positive ?? 0;
+            const hasData = totalReviews > 0;
+            const positiveRatio = hasData ? Math.round((positive / totalReviews) * 100) : 0;
+            const barColor = positiveRatio >= 80 ? "bg-emerald-500" : positiveRatio >= 60 ? "bg-lime-400" : positiveRatio >= 40 ? "bg-amber-400" : "bg-rose-500";
+            const isCrownRatio = hasData && Math.abs(positive / totalReviews - maxRatioVal) < 1e-9;
+            const isCrownReviews = hasData && totalReviews === maxReviewsVal;
 
-          <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
-            <div class="mb-4">
-              <h3 class="text-xl font-semibold text-white">Steam score by language</h3>
-              <p class="text-sm text-mist/65">Steam review score compared across the full language set.</p>
-            </div>
-            <div style={`height:${chartHeight}px`}>
-              <canvas id={`${scopeId}-score`}></canvas>
-            </div>
+            return (
+              <div class="grid items-center gap-x-3 rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-2.5" style="grid-template-columns: minmax(0,1fr) minmax(0,2fr) 4.5rem">
+                <div class="truncate text-sm font-medium text-white">{definition.label}</div>
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    {hasData ? <div class={`h-full rounded-full ${barColor}`} style={`width:${positiveRatio}%`}></div> : null}
+                  </div>
+                  <span class="flex items-center justify-end gap-0.5 w-10 shrink-0 font-mono text-xs tabular-nums text-mist/55">
+                    {hasData ? `${positiveRatio}%` : "—"}
+                    {isCrownRatio ? <span class="text-amber-400 text-[11px] leading-none">👑</span> : null}
+                  </span>
+                </div>
+                <div class="inline-flex items-center justify-end gap-0.5 text-right font-mono text-sm tabular-nums text-white">
+                  {hasData ? formatNumber.format(totalReviews) : <span class="text-mist/30">—</span>}
+                  {isCrownReviews ? <span class="text-amber-400 text-[11px] leading-none">👑</span> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </div>
+      </section>
+
+      <section class="grid gap-6 md:grid-cols-2">
+        <div class="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
+          {themeImage ? (
+            <div
+              class="absolute inset-0 bg-cover bg-center opacity-[0.07]"
+              style={`background-image:url('${themeImage}')`}
+            />
+          ) : null}
+          <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.14))]" />
+          <div class="relative">
+          <div class="mb-4">
+            <h3 class="text-xl font-semibold text-white">Review volume</h3>
+            <p class="text-sm text-mist/65">Total review count by language.</p>
+          </div>
+          <div id={`${scopeId}-reviews-wrapper`} style={`height:${chartHeight}px`}>
+            <canvas id={`${scopeId}-reviews`}></canvas>
+          </div>
           </div>
         </div>
 
-        <div class="grid gap-6">
-          <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
-            <div class="mb-4">
-              <h3 class="text-xl font-semibold text-white">Positive vs negative</h3>
-              <p class="text-sm text-mist/65">Combined sentiment split across all supported languages.</p>
-            </div>
-            <div class="mx-auto max-w-[320px]" style="height:320px">
-              <canvas id={`${scopeId}-sentiment`}></canvas>
-            </div>
+        <div class="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
+          {themeImage ? (
+            <div
+              class="absolute inset-0 bg-cover bg-center opacity-[0.07]"
+              style={`background-image:url('${themeImage}')`}
+            />
+          ) : null}
+          <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.14))]" />
+          <div class="relative">
+          <div class="mb-4">
+            <h3 class="text-xl font-semibold text-white">Positive ratio</h3>
+            <p class="text-sm text-mist/65">Positive review percentage by language.</p>
           </div>
-
-          <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5 sm:p-6">
-            <div class="mb-4">
-              <h3 class="text-xl font-semibold text-white">Language breakdown</h3>
-              <p class="text-sm text-mist/65">Each supported language listed without horizontal overflow.</p>
-            </div>
-            <div id={`${scopeId}-breakdown`} class="grid gap-3">
-              {STEAM_LANGUAGE_DEFINITIONS.map((definition) => {
-                const language = languageMap.get(definition.id);
-                const reviewScore = language?.reviewScore ?? 0;
-                const reviewScoreLabel = language?.reviewScoreLabel ?? "No data for this language";
-                const totalReviews = language?.totalReviews ?? 0;
-                const positive = language?.positive ?? 0;
-                const negative = language?.negative ?? 0;
-
-                return (
-                  <article class="grid gap-2 rounded-2xl border border-white/10 bg-ink/45 p-4 md:grid-cols-[1.3fr,0.9fr,0.9fr,0.9fr] md:items-center">
-                    <div class="min-w-0">
-                      <div class="truncate text-base font-semibold text-white">{definition.label}</div>
-                      <div class="text-sm text-mist/55">{reviewScoreLabel}</div>
-                    </div>
-                    <div class="text-sm text-mist/75">
-                      <span class="font-mono text-xs uppercase tracking-[0.2em] text-mist/50">Reviews</span>
-                      <div class="mt-1 text-white">{formatNumber.format(totalReviews)}</div>
-                    </div>
-                    <div class="text-sm text-mist/75">
-                      <span class="font-mono text-xs uppercase tracking-[0.2em] text-mist/50">Sentiment</span>
-                      <div class="mt-1 text-emerald-400">{formatNumber.format(positive)} positive</div>
-                      <div class="text-rose-400">{formatNumber.format(negative)} negative</div>
-                    </div>
-                    <div class="text-sm text-mist/75">
-                      <span class="font-mono text-xs uppercase tracking-[0.2em] text-mist/50">Score</span>
-                      <div class="mt-1 text-white">{reviewScore}/9</div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+          <div id={`${scopeId}-score-wrapper`} style={`height:${chartHeight}px`}>
+            <canvas id={`${scopeId}-score`}></canvas>
+          </div>
           </div>
         </div>
       </section>

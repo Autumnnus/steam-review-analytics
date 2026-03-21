@@ -39,6 +39,22 @@ export class TTLCache<K, V> {
     return value;
   }
 
+  values(): V[] {
+    const now = Date.now();
+    const result: V[] = [];
+
+    for (const [key, entry] of this.entries) {
+      if (now >= entry.expiresAt) {
+        this.delete(key);
+        continue;
+      }
+
+      result.push(entry.value);
+    }
+
+    return result;
+  }
+
   delete(key: K): void {
     const existing = this.entries.get(key);
     if (!existing) {

@@ -24,6 +24,30 @@ export type SteamAppDetailsResponse = Record<
   }
 >;
 
+export type SteamStoreSearchResponse = {
+  items?: Array<{
+    id?: number;
+    name?: string;
+    tiny_image?: string;
+    type?: string;
+  }>;
+};
+
+export type SteamSearchSuggestion = {
+  appId: number;
+  name: string;
+  imageUrl: string;
+  type: string;
+};
+
+export type CachedGame = {
+  appId: number;
+  name: string;
+  steamUrl: string;
+  imageUrl: string;
+  lastViewedAt: string;
+};
+
 export type GameDetails = {
   appId: number;
   name: string;

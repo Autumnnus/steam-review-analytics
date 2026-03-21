@@ -9,7 +9,7 @@ Steam oyunlari icin dil bazli review istatistiklerini gosteren hafif bir Bun + H
 - Hono JSX + HTMX
 - Chart.js CDN
 - Tailwind CSS CDN
-- In-memory TTL cache
+- TTL cache with persisted analytics snapshots
 
 ## Kurulum
 
@@ -34,7 +34,8 @@ Uygulama varsayilan olarak `http://localhost:3000` adresinde acilir.
 
 ## Cache davranisi
 
-- Oyun detaylari ve dil bazli review ozetleri bellekte `15 dakika` tutulur.
+- Oyun detaylari, dil bazli review ozetleri ve tam analytics sonucu `1 saat` tutulur.
+- Tam analytics sonucu diskte de saklanir; uygulama yeniden baslasa da TTL dolmadiysa Steam'e tekrar gitmeden kullanilabilir.
 - Ayni `appId` veya ayni `appId + dil` icin pes pese gelen isteklerde Steam API tekrar cagrilmaz.
 - Eszamanli duplicate istekler tek bir fetch promise'i uzerinden birlestirilir.
 
