@@ -8,6 +8,7 @@ import {
   APP_ORIGIN,
   SITE_URL,
   UMAMI_BASE_URL,
+  UMAMI_DEBUG_HEADERS,
   UMAMI_SCRIPT_URL,
 } from "./config";
 import { createRateLimiter } from "./middleware/rate-limit";
@@ -140,6 +141,32 @@ if (UMAMI_BASE_URL) {
       proxyHeaders,
       "X-Forwarded-Proto",
     );
+
+    if (UMAMI_DEBUG_HEADERS) {
+      console.log(
+        "[umami-proxy]",
+        JSON.stringify({
+          resolvedClientIp: clientIp || null,
+          incoming: {
+            cfConnectingIp: c.req.header("cf-connecting-ip") || null,
+            trueClientIp: c.req.header("true-client-ip") || null,
+            xRealIp: c.req.header("x-real-ip") || null,
+            xForwardedFor: c.req.header("x-forwarded-for") || null,
+            cfIpCountry: c.req.header("cf-ipcountry") || null,
+            cfRegionCode: c.req.header("cf-region-code") || null,
+            cfIpCity: c.req.header("cf-ipcity") || null,
+          },
+          forwarded: {
+            xForwardedFor: proxyHeaders["X-Forwarded-For"] || null,
+            xRealIp: proxyHeaders["X-Real-IP"] || null,
+            cfConnectingIp: proxyHeaders["CF-Connecting-IP"] || null,
+            cfIpCountry: proxyHeaders["CF-IPCountry"] || null,
+            cfRegionCode: proxyHeaders["CF-RegionCode"] || null,
+            cfIpCity: proxyHeaders["CF-IPCity"] || null,
+          },
+        }),
+      );
+    }
 
     const res = await fetch(`${UMAMI_BASE_URL}/api/x`, {
       method: "POST",

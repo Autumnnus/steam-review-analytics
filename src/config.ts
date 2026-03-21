@@ -11,6 +11,7 @@ export const UMAMI_WEBSITE_ID = Bun.env.UMAMI_WEBSITE_ID?.trim() || "";
 export const UMAMI_BASE_URL = UMAMI_SCRIPT_URL
   ? new URL(UMAMI_SCRIPT_URL).origin
   : "";
+export const UMAMI_DEBUG_HEADERS = Bun.env.UMAMI_DEBUG_HEADERS === "1";
 
 export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "arabic", label: "Arabic", flag: "🇸🇦", aliases: ["arabic"] },
