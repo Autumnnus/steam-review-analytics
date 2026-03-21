@@ -1,6 +1,11 @@
 /** @jsxImportSource hono/jsx */
 import type { FC, PropsWithChildren } from "hono/jsx";
-import { STEAM_LANGUAGE_DEFINITIONS, UMAMI_SCRIPT_URL, UMAMI_BASE_URL, UMAMI_WEBSITE_ID } from "../config";
+import {
+  STEAM_LANGUAGE_DEFINITIONS,
+  UMAMI_BASE_URL,
+  UMAMI_SCRIPT_URL,
+  UMAMI_WEBSITE_ID,
+} from "../config";
 
 type LayoutProps = PropsWithChildren<{
   title?: string;
@@ -13,10 +18,20 @@ export const Layout: FC<LayoutProps> = ({
   const hasUmami = Boolean(UMAMI_SCRIPT_URL && UMAMI_WEBSITE_ID);
   const umamiProxied = hasUmami && Boolean(UMAMI_BASE_URL);
   const languageLabels = JSON.stringify(
-    Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.label])),
+    Object.fromEntries(
+      STEAM_LANGUAGE_DEFINITIONS.map((language) => [
+        language.id,
+        language.label,
+      ]),
+    ),
   ).replace(/</g, "\\u003c");
   const languageFlags = JSON.stringify(
-    Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.flag])),
+    Object.fromEntries(
+      STEAM_LANGUAGE_DEFINITIONS.map((language) => [
+        language.id,
+        language.flag,
+      ]),
+    ),
   ).replace(/</g, "\\u003c");
   const bootstrap = `
     window.reviewCharts = window.reviewCharts || new Map();
@@ -513,7 +528,11 @@ export const Layout: FC<LayoutProps> = ({
           content="View Steam review analytics across every supported language for a game."
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
           rel="stylesheet"
@@ -549,9 +568,11 @@ export const Layout: FC<LayoutProps> = ({
         {hasUmami ? (
           umamiProxied ? (
             // Dynamically inject tracker to avoid ad blocker element-selector rules (e.g. script[data-website-id])
-            <script dangerouslySetInnerHTML={{ __html:
-              `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.async=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');s.setAttribute('data-host-url',window.location.origin);document.head.appendChild(s);})();`
-            }} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.async=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');s.setAttribute('data-host-url',window.location.origin);document.head.appendChild(s);})();`,
+              }}
+            />
           ) : (
             <script
               defer

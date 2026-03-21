@@ -55,6 +55,8 @@ The app runs at `http://localhost:3010` by default.
 ## Traffic Tracking (Umami)
 
 - Add `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID` in `.env` to enable tracking.
+- `UMAMI_SCRIPT_URL` must match your Umami `TRACKER_SCRIPT_NAME` (example: `.../x.js` if tracker name is `x.js`).
+- `SITE_URL` must be your public app URL in production. Do not leave it as `localhost` on a server deployment.
 - The app emits custom Umami events:
   - `search_select_game`
   - `analyze_submit`

@@ -67,12 +67,18 @@ app.get("/sitemap.xml", (c) => {
 // Umami proxy routes — serve script and collect endpoint from own domain to bypass ad blockers
 if (UMAMI_SCRIPT_URL) {
   app.get("/ux/tracker.js", async (c) => {
-    const res = await fetch(UMAMI_SCRIPT_URL);
-    const body = await res.text();
-    return c.text(body, 200, {
-      "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
-    });
+    try {
+      const res = await fetch(UMAMI_SCRIPT_URL);
+      const body = await res.text();
+      return c.body(body, res.status as any, {
+        "Content-Type":
+          res.headers.get("content-type") ||
+          "application/javascript; charset=utf-8",
+        "Cache-Control": res.ok ? "public, max-age=3600" : "no-store",
+      });
+    } catch (_) {
+      return c.text("Unable to load Umami tracker script.", 502);
+    }
   });
 }
 if (UMAMI_BASE_URL) {
@@ -87,7 +93,7 @@ if (UMAMI_BASE_URL) {
           c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "",
         "X-Real-IP":
           c.req.header("x-real-ip") ||
-          (c.req.header("x-forwarded-for") || "").split(",")[0].trim(),
+          ((c.req.header("x-forwarded-for") || "").split(",")[0] ?? "").trim(),
       },
       body,
     });
