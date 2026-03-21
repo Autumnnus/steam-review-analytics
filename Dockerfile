@@ -2,7 +2,7 @@ FROM oven/bun:1.3.10 AS base
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends redis-server \
+  && apt-get install -y --no-install-recommends redis-server curl \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json bun.lock ./
@@ -16,6 +16,6 @@ ENV REDIS_URL=redis://127.0.0.1:6379
 EXPOSE 3010
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3010/ || exit 1
+  CMD curl -fs http://localhost:${PORT:-3010}/ || exit 1
 
 CMD ["/app/docker-entrypoint.sh"]
