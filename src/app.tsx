@@ -34,6 +34,18 @@ const resolveClientIp = (c: Context) => {
   return xForwardedFor[0] || "";
 };
 
+const copyHeaderIfPresent = (
+  c: Context,
+  sourceHeader: string,
+  targetHeaders: Record<string, string>,
+  targetHeader = sourceHeader,
+) => {
+  const value = (c.req.header(sourceHeader) || "").trim();
+  if (value) {
+    targetHeaders[targetHeader] = value;
+  }
+};
+
 // Analytics endpoints: max 10 requests/min per IP (each triggers ~30 Steam requests)
 const analyticsRateLimit = createRateLimiter(10, 60_000);
 // Search endpoint: max 30 requests/min per IP
@@ -117,6 +129,17 @@ if (UMAMI_BASE_URL) {
       proxyHeaders["X-Real-IP"] = clientIp;
       proxyHeaders["CF-Connecting-IP"] = clientIp;
     }
+
+    copyHeaderIfPresent(c, "cf-ipcountry", proxyHeaders, "CF-IPCountry");
+    copyHeaderIfPresent(c, "cf-region-code", proxyHeaders, "CF-RegionCode");
+    copyHeaderIfPresent(c, "cf-ipcity", proxyHeaders, "CF-IPCity");
+    copyHeaderIfPresent(c, "x-forwarded-host", proxyHeaders, "X-Forwarded-Host");
+    copyHeaderIfPresent(
+      c,
+      "x-forwarded-proto",
+      proxyHeaders,
+      "X-Forwarded-Proto",
+    );
 
     const res = await fetch(`${UMAMI_BASE_URL}/api/x`, {
       method: "POST",
