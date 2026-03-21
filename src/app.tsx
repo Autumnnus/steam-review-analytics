@@ -71,7 +71,7 @@ if (UMAMI_SCRIPT_URL) {
   });
 }
 if (UMAMI_BASE_URL) {
-  app.post("/ux/collect", async (c) => {
+  app.post("/api/send", async (c) => {
     const body = await c.req.text();
     const res = await fetch(`${UMAMI_BASE_URL}/api/send`, {
       method: "POST",
