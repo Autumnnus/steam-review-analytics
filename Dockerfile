@@ -17,6 +17,6 @@ ENV PORT=3099
 EXPOSE 3099
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -fs http://localhost:${PORT:-3099}/ || exit 1
+  CMD curl -fs http://localhost:${PORT:-3099}/health || exit 1
 
 CMD ["/app/docker-entrypoint.sh"]
