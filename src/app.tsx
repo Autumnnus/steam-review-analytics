@@ -71,9 +71,9 @@ if (UMAMI_SCRIPT_URL) {
   });
 }
 if (UMAMI_BASE_URL) {
-  app.post("/api/send", async (c) => {
+  app.post("/api/x", async (c) => {
     const body = await c.req.text();
-    const res = await fetch(`${UMAMI_BASE_URL}/api/send`, {
+    const res = await fetch(`${UMAMI_BASE_URL}/api/x`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
