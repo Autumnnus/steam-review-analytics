@@ -157,11 +157,13 @@ const sanitizeCachedGame = (value: CachedGame): CachedGame | null => {
 
 const readRecentGames = async (): Promise<CachedGame[]> => {
   const games = (await getCachedJson<CachedGame[]>(RECENT_GAMES_CACHE_KEY)) ?? [];
-  return games
+  const normalized = games
     .map(sanitizeCachedGame)
-    .filter((game): game is CachedGame => Boolean(game))
-    .sort(compareByLastViewed)
-    .slice(0, MAX_RECENT_GAMES);
+    .filter((game): game is CachedGame => Boolean(game));
+
+  return normalized
+    .slice(-MAX_RECENT_GAMES)
+    .sort(compareByLastViewed);
 };
 
 const rememberCachedGame = async (game: CachedGame): Promise<CachedGame> => {

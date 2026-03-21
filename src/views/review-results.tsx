@@ -192,14 +192,14 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
             <button
               data-sort-col="ratio"
               data-scope={scopeId}
-              class="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-mist/40 cursor-pointer select-none transition-colors"
+              class="inline-flex items-center justify-self-start rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-mist/55 cursor-pointer select-none transition-colors hover:border-sky/40 hover:bg-white/10 hover:text-white"
             >
               Positive ratio %<span data-sort-indicator></span>
             </button>
             <button
               data-sort-col="reviews"
               data-scope={scopeId}
-              class="flex items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest text-sky cursor-pointer select-none transition-colors"
+              class="inline-flex items-center justify-self-end rounded-full border border-sky/40 bg-sky/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-sky cursor-pointer select-none transition-colors hover:border-sky/60 hover:bg-sky/15"
             >
               Reviews<span data-sort-indicator> ↓</span>
             </button>
