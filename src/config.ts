@@ -1,7 +1,11 @@
 export const PORT = Number(Bun.env.PORT ?? 3010);
 export const CACHE_TTL_MS = Number(Bun.env.CACHE_TTL_MS ?? 60 * 60 * 1000);
+export const REDIS_URL = Bun.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+export const REDIS_CACHE_PREFIX = Bun.env.REDIS_CACHE_PREFIX ?? "steam-review-analytics:";
 export const STORE_LANGUAGE = Bun.env.STORE_LANGUAGE ?? "english";
 export const APP_ORIGIN = Bun.env.APP_ORIGIN?.trim() || "";
+export const SITE_URL =
+  Bun.env.SITE_URL?.trim().replace(/\/+$/, "") || `http://localhost:${PORT}`;
 
 export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "arabic", label: "Arabic", flag: "🇸🇦", aliases: ["arabic"] },

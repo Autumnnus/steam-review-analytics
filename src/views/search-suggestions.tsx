@@ -29,11 +29,11 @@ export const SearchSuggestions = ({
   }
 
   return (
-    <div class="overflow-hidden rounded-2xl border border-white/10 bg-ink/95 shadow-2xl">
+    <div class="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-ink/95 shadow-2xl">
       {suggestions.map((suggestion) => (
         <button
           type="button"
-          class="flex w-full items-center gap-3 border-b border-white/5 px-4 py-3 text-left transition hover:bg-white/5 last:border-b-0"
+          class="flex w-full min-w-0 max-w-full items-center gap-3 overflow-hidden border-b border-white/5 px-4 py-3 text-left transition hover:bg-white/5 last:border-b-0"
           data-app-suggestion="true"
           data-app-id={String(suggestion.appId)}
           data-app-name={suggestion.name}
@@ -48,11 +48,11 @@ export const SearchSuggestions = ({
           ) : (
             <div class="h-10 w-[76px] shrink-0 rounded-lg bg-white/5" />
           )}
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 max-w-full flex-1 overflow-hidden">
             <div class="truncate text-sm font-semibold text-white">
               {suggestion.name}
             </div>
-            <div class="font-mono text-[11px] uppercase tracking-[0.24em] text-mist/45">
+            <div class="truncate font-mono text-[11px] uppercase tracking-[0.24em] text-mist/45">
               {suggestion.type} #{suggestion.appId}
             </div>
           </div>

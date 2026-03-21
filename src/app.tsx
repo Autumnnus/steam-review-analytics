@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { jsxRenderer } from "hono/jsx-renderer";
-import { APP_ORIGIN } from "./config";
+import { APP_ORIGIN, SITE_URL } from "./config";
 import { apiRoutes } from "./routes/api";
 import { pageRoutes } from "./routes/pages";
 import { Layout } from "./views/layout";
@@ -33,6 +33,31 @@ app.use(
   "*",
   jsxRenderer(({ children }) => <Layout>{children}</Layout>),
 );
+
+app.get("/robots.txt", (c) => {
+  const robots = `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}/sitemap.xml\n`;
+  return c.text(robots, 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+});
+
+app.get("/sitemap.xml", (c) => {
+  const lastmod = new Date().toISOString();
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${SITE_URL}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+  return c.body(sitemap, 200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+});
 
 app.route("/", pageRoutes);
 app.route("/api", apiRoutes);

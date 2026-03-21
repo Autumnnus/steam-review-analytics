@@ -17,6 +17,7 @@ export const Layout: FC<LayoutProps> = ({
     window.reviewCharts = window.reviewCharts || new Map();
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
+    window.lastReviewSortState = window.lastReviewSortState || { col: 'ratio', dir: 'desc' };
     window.reviewLanguageLabels = ${languageLabels};
     window.renderCachedGameCard = (game) => {
       const button = document.createElement('button');
@@ -106,6 +107,9 @@ export const Layout: FC<LayoutProps> = ({
         try {
           window.reviewPayloads.set(scope, JSON.parse(payloadText));
         } catch (_) {}
+        if (!window.reviewSortStates.has(scope)) {
+          window.reviewSortStates.set(scope, { ...window.lastReviewSortState });
+        }
       });
       window.applyReviewFilter();
     };
@@ -162,15 +166,20 @@ export const Layout: FC<LayoutProps> = ({
       if (reviewTotalNode) reviewTotalNode.textContent = filteredPayload.totals.totalReviews.toLocaleString('en-US');
       if (positiveShareNode) positiveShareNode.textContent = filteredPayload.totals.positiveRatio + '%';
       const sortState = window.reviewSortStates.get(scope) || { col: 'ratio', dir: 'desc' };
-      const headerNode = document.getElementById(\`\${scope}-breakdown-header\`);
-      if (headerNode) {
-        headerNode.querySelectorAll('[data-sort-col]').forEach((btn) => {
+      const sortControlNodes = document.querySelectorAll(\`[data-scope="\${scope}"][data-sort-col]\`);
+      if (sortControlNodes.length) {
+        sortControlNodes.forEach((btn) => {
           const col = btn.getAttribute('data-sort-col');
           const isActive = col === sortState.col;
           const indicator = btn.querySelector('[data-sort-indicator]');
           if (indicator) indicator.textContent = isActive ? (sortState.dir === 'desc' ? ' ↓' : ' ↑') : '';
-          const isRight = col === 'reviews';
-          btn.className = \`\${isRight ? 'flex items-center justify-end gap-1' : 'flex items-center gap-1'} font-mono text-[10px] uppercase tracking-widest cursor-pointer select-none transition-colors \${isActive ? 'text-sky' : 'text-mist/40 hover:text-mist/70'}\`;
+          const isDesktopHeader = btn.closest('[id$="-breakdown-header"]');
+          if (isDesktopHeader) {
+            const isRight = col === 'reviews';
+            btn.className = \`\${isRight ? 'flex items-center justify-end gap-1' : 'flex items-center gap-1'} font-mono text-[10px] uppercase tracking-widest cursor-pointer select-none transition-colors \${isActive ? 'text-sky' : 'text-mist/40 hover:text-mist/70'}\`;
+            return;
+          }
+          btn.className = \`inline-flex items-center rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.2em] transition-colors \${isActive ? 'border-sky/40 bg-sky/10 text-sky' : 'border-white/10 bg-white/5 text-mist/55'}\`;
         });
       }
       const withData = filteredPayload.languages.filter((l) => l.totalReviews > 0);
@@ -183,9 +192,17 @@ export const Layout: FC<LayoutProps> = ({
         if (!hasA && !hasB) return 0;
         if (!hasA) return 1;
         if (!hasB) return -1;
-        const valA = sortState.col === 'ratio' ? a.positive / a.totalReviews : a.totalReviews;
-        const valB = sortState.col === 'ratio' ? b.positive / b.totalReviews : b.totalReviews;
-        return sortState.dir === 'desc' ? valB - valA : valA - valB;
+        const valA = sortState.col === 'ratio' ? a.positiveRatio : a.totalReviews;
+        const valB = sortState.col === 'ratio' ? b.positiveRatio : b.totalReviews;
+        if (valA !== valB) {
+          return sortState.dir === 'desc' ? valB - valA : valA - valB;
+        }
+        const ratioTieA = a.positiveRatio;
+        const ratioTieB = b.positiveRatio;
+        if (sortState.col === 'reviews' && ratioTieA !== ratioTieB) {
+          return sortState.dir === 'desc' ? ratioTieB - ratioTieA : ratioTieA - ratioTieB;
+        }
+        return sortState.dir === 'desc' ? b.totalReviews - a.totalReviews : a.totalReviews - b.totalReviews;
       });
       if (breakdownNode) {
         breakdownNode.innerHTML = sortedLanguages
@@ -195,16 +212,18 @@ export const Layout: FC<LayoutProps> = ({
             const barColor = ratio >= 80 ? 'bg-emerald-500' : ratio >= 60 ? 'bg-lime-400' : ratio >= 40 ? 'bg-amber-400' : 'bg-rose-500';
             const isCrownRatio = hasData && Math.abs(item.positive / item.totalReviews - maxRatioVal) < 1e-9;
             const isCrownReviews = hasData && item.totalReviews === maxReviewsVal;
-            const barHtml = hasData
-              ? \`<div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full rounded-full \${barColor}" style="width:\${ratio}%"></div></div><span class="flex items-center justify-end gap-0.5 w-10 shrink-0 font-mono text-xs tabular-nums text-mist/55">\${ratio}%\${isCrownRatio ? crown : ''}</span>\`
-              : \`<div class="flex-1 h-1.5 rounded-full bg-white/10"></div><span class="w-10 shrink-0 text-right font-mono text-xs text-mist/30">—</span>\`;
             const reviewsHtml = hasData
-              ? \`<span class="inline-flex items-center justify-end gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')}\${isCrownReviews ? crown : ''}</span>\`
-              : \`<span class="text-sm text-mist/30">—</span>\`;
-            return \`<div class="grid items-center gap-x-3 rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-2.5" style="grid-template-columns: minmax(0,1fr) minmax(0,2fr) 4.5rem">
-              <div class="truncate text-sm font-medium text-white">\${item.label}</div>
-              <div class="flex items-center gap-2 min-w-0">\${barHtml}</div>
-              <div class="text-right">\${reviewsHtml}</div>
+              ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews\${isCrownReviews ? crown : ''}</span>\`
+              : \`<span class="text-sm text-mist/30">No reviews</span>\`;
+            return \`<div class="rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 text-sm font-medium text-white">\${item.label}</div>
+                <div class="shrink-0 font-mono text-xs text-mist/55">\${hasData ? ratio + '%' : '—'}\${isCrownRatio ? crown : ''}</div>
+              </div>
+              <div class="mt-2 flex items-center gap-2 min-w-0">
+                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full \${barColor}" style="width:\${ratio}%"></div>\` : ''}</div>
+              </div>
+              <div class="mt-2 text-left">\${reviewsHtml}</div>
             </div>\`;
           })
           .join('');
@@ -345,6 +364,7 @@ export const Layout: FC<LayoutProps> = ({
             steamUrl: \`https://store.steampowered.com/app/\${appId}\`
           });
         }
+        window.runAnalyticsForSelectedGame();
         return;
       }
       const cachedGame = event.target.closest('[data-cached-game="true"]');
@@ -370,7 +390,9 @@ export const Layout: FC<LayoutProps> = ({
       if (!col || !scope) return;
       const current = window.reviewSortStates.get(scope) || { col: 'ratio', dir: 'desc' };
       const newDir = current.col === col ? (current.dir === 'desc' ? 'asc' : 'desc') : 'desc';
-      window.reviewSortStates.set(scope, { col, dir: newDir });
+      const newSortState = { col, dir: newDir };
+      window.reviewSortStates.set(scope, newSortState);
+      window.lastReviewSortState = newSortState;
       window.updateBreakdownForScope(scope);
     });
     document.addEventListener('change', (event) => {
@@ -385,6 +407,12 @@ export const Layout: FC<LayoutProps> = ({
       if (appIdInput) appIdInput.value = '';
       event.target.setCustomValidity('');
       window.updateSelectedAppLabel('', '');
+      const results = document.getElementById('results');
+      if (results && results.querySelector('[data-review-scope]')) {
+        results.style.opacity = '0.3';
+        results.style.pointerEvents = 'none';
+        results.style.transition = 'opacity 0.2s';
+      }
     });
     document.addEventListener('submit', (event) => {
       const form = event.target;
@@ -403,7 +431,20 @@ export const Layout: FC<LayoutProps> = ({
       window.updateSelectedAppLabel(appIdInput ? appIdInput.value : '', '');
       window.hydrateReviewResults(document);
     });
+    document.addEventListener('htmx:beforeRequest', (event) => {
+      if (!event.detail || !event.detail.target || event.detail.target.id !== 'results') return;
+      window.reviewCharts.forEach((charts) => charts.forEach((c) => c.destroy()));
+      window.reviewCharts.clear();
+      window.reviewPayloads.clear();
+      event.detail.target.innerHTML = '<div class="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-mist/40 animate-pulse">Fetching game data...</div>';
+    });
     document.addEventListener('htmx:afterSwap', (event) => {
+      const results = document.getElementById('results');
+      if (results) {
+        results.style.opacity = '';
+        results.style.pointerEvents = '';
+        results.style.transition = '';
+      }
       window.hydrateReviewResults(event.target);
     });
   `;
@@ -454,6 +495,9 @@ export const Layout: FC<LayoutProps> = ({
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         <style>{`
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
           :root {
             color-scheme: dark;
           }

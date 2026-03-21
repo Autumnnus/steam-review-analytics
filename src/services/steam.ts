@@ -5,8 +5,6 @@ import {
   STEAM_LANGUAGE_DEFINITIONS,
   STORE_LANGUAGE,
 } from "../config";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import type {
   CachedGame,
   GameDetails,
@@ -17,6 +15,7 @@ import type {
   SteamSearchSuggestion,
   SteamStoreSearchResponse,
 } from "../types/steam";
+import { getCachedJson, setCachedJson } from "./redis-cache";
 import { TTLCache } from "./ttl-cache";
 
 const withConcurrencyLimit = async <T>(
@@ -42,13 +41,8 @@ const gameCache = new TTLCache<string, GameDetails>(CACHE_TTL_MS);
 const searchCache = new TTLCache<string, SteamSearchSuggestion[]>(CACHE_TTL_MS);
 const analyticsCache = new TTLCache<string, ReviewAnalytics>(CACHE_TTL_MS);
 const inFlightRequests = new Map<string, Promise<unknown>>();
-const persistedGamesPath = join(process.cwd(), ".cache", "cached-games.json");
-const persistedAnalyticsPath = join(process.cwd(), ".cache", "cached-analytics.json");
-const persistedGames = new Map<number, CachedGame>();
-const persistedAnalytics = new Map<number, ReviewAnalytics>();
-let persistedGamesLoaded = false;
-let persistedAnalyticsLoaded = false;
-const MAX_RECENT_GAMES = 12;
+const MAX_RECENT_GAMES = 10;
+const RECENT_GAMES_CACHE_KEY = "recent-games";
 
 const fetchJson = async <T>(url: string): Promise<T> => {
   const controller = new AbortController();
@@ -147,125 +141,45 @@ const toCachedGame = (
 const compareByLastViewed = (left: CachedGame, right: CachedGame) =>
   new Date(right.lastViewedAt).getTime() - new Date(left.lastViewedAt).getTime();
 
-const trimPersistedGames = () => {
-  const recentGames = [...persistedGames.values()]
+const sanitizeCachedGame = (value: CachedGame): CachedGame | null => {
+  if (!value || !Number.isInteger(value.appId) || value.appId <= 0 || !value.name) {
+    return null;
+  }
+
+  return {
+    ...value,
+    lastViewedAt:
+      typeof value.lastViewedAt === "string" && value.lastViewedAt
+        ? value.lastViewedAt
+        : new Date(0).toISOString(),
+  };
+};
+
+const readRecentGames = async (): Promise<CachedGame[]> => {
+  const games = (await getCachedJson<CachedGame[]>(RECENT_GAMES_CACHE_KEY)) ?? [];
+  return games
+    .map(sanitizeCachedGame)
+    .filter((game): game is CachedGame => Boolean(game))
+    .sort(compareByLastViewed)
+    .slice(0, MAX_RECENT_GAMES);
+};
+
+const rememberCachedGame = async (game: CachedGame): Promise<CachedGame> => {
+  const current = await readRecentGames();
+  const next: CachedGame[] = [
+    { ...game, lastViewedAt: new Date().toISOString() },
+    ...current.filter((item) => item.appId !== game.appId),
+  ]
     .sort(compareByLastViewed)
     .slice(0, MAX_RECENT_GAMES);
 
-  persistedGames.clear();
-  for (const game of recentGames) {
-    persistedGames.set(game.appId, game);
-  }
-};
-
-const loadPersistedGames = async (): Promise<void> => {
-  if (persistedGamesLoaded) {
-    return;
-  }
-
-  persistedGamesLoaded = true;
-
-  try {
-    const raw = await readFile(persistedGamesPath, "utf8");
-    const parsed = JSON.parse(raw) as CachedGame[];
-
-    for (const game of parsed) {
-      if (game && Number.isInteger(game.appId) && game.appId > 0 && game.name) {
-        persistedGames.set(game.appId, {
-          ...game,
-          lastViewedAt:
-            typeof game.lastViewedAt === "string" && game.lastViewedAt
-              ? game.lastViewedAt
-              : new Date(0).toISOString(),
-        });
-      }
-    }
-
-    trimPersistedGames();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.error("Failed to load cached games:", error);
-    }
-  }
-};
-
-const persistGames = async (): Promise<void> => {
-  await mkdir(dirname(persistedGamesPath), { recursive: true });
-  await writeFile(
-    persistedGamesPath,
-    JSON.stringify(
-      [...persistedGames.values()].sort(compareByLastViewed),
-      null,
-      2,
-    ),
-    "utf8",
-  );
-};
-
-const rememberPersistedGame = async (game: CachedGame): Promise<CachedGame> => {
-  await loadPersistedGames();
-  persistedGames.set(game.appId, {
-    ...game,
-    lastViewedAt: new Date().toISOString(),
-  });
-  trimPersistedGames();
-  await persistGames();
-  return persistedGames.get(game.appId)!;
-};
-
-const loadPersistedAnalytics = async (): Promise<void> => {
-  if (persistedAnalyticsLoaded) {
-    return;
-  }
-
-  persistedAnalyticsLoaded = true;
-
-  try {
-    const raw = await readFile(persistedAnalyticsPath, "utf8");
-    const parsed = JSON.parse(raw) as ReviewAnalytics[];
-    const now = Date.now();
-
-    for (const analytics of parsed) {
-      if (!analytics || !Number.isInteger(analytics.appId) || analytics.appId <= 0) {
-        continue;
-      }
-
-      const fetchedAt = new Date(analytics.fetchedAt).getTime();
-      if (!Number.isFinite(fetchedAt) || now - fetchedAt > CACHE_TTL_MS) {
-        continue;
-      }
-
-      persistedAnalytics.set(analytics.appId, analytics);
-      analyticsCache.set(`analytics:${analytics.appId}`, analytics);
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.error("Failed to load cached analytics:", error);
-    }
-  }
-};
-
-const persistAnalytics = async (): Promise<void> => {
-  await mkdir(dirname(persistedAnalyticsPath), { recursive: true });
-  await writeFile(
-    persistedAnalyticsPath,
-    JSON.stringify(
-      [...persistedAnalytics.values()].sort(
-        (left, right) =>
-          new Date(right.fetchedAt).getTime() - new Date(left.fetchedAt).getTime(),
-      ),
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  await setCachedJson(RECENT_GAMES_CACHE_KEY, next);
+  return next[0]!;
 };
 
 const rememberAnalytics = async (analytics: ReviewAnalytics): Promise<ReviewAnalytics> => {
-  await loadPersistedAnalytics();
-  persistedAnalytics.set(analytics.appId, analytics);
+  await setCachedJson(`analytics:${analytics.appId}`, analytics);
   analyticsCache.set(`analytics:${analytics.appId}`, analytics);
-  await persistAnalytics();
   return analytics;
 };
 
@@ -317,6 +231,11 @@ export const searchSteamApps = async (
     return cached;
   }
 
+  const redisCached = await getCachedJson<SteamSearchSuggestion[]>(cacheKey);
+  if (redisCached) {
+    return searchCache.set(cacheKey, redisCached);
+  }
+
   return dedupe(cacheKey, async () => {
     const response = await fetchJson<SteamStoreSearchResponse>(
       `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(normalizedTerm)}&l=${STORE_LANGUAGE}&cc=US`,
@@ -341,6 +260,7 @@ export const searchSteamApps = async (
         type: item.type ?? "app",
       }));
 
+    await setCachedJson(cacheKey, suggestions);
     return searchCache.set(cacheKey, suggestions);
   });
 };
@@ -350,6 +270,11 @@ const getGameDetails = async (appId: number): Promise<GameDetails> => {
   const cached = gameCache.get(cacheKey);
   if (cached) {
     return cached;
+  }
+
+  const redisCached = await getCachedJson<GameDetails>(cacheKey);
+  if (redisCached) {
+    return gameCache.set(cacheKey, redisCached);
   }
 
   return dedupe(cacheKey, async () => {
@@ -370,7 +295,7 @@ const getGameDetails = async (appId: number): Promise<GameDetails> => {
       supportedLanguagesRaw,
     );
 
-    return gameCache.set(cacheKey, {
+    const gameDetails = {
       appId,
       name: appInfo.data.name,
       shortDescription: sanitizeStoreText(appInfo.data.short_description ?? ""),
@@ -383,35 +308,40 @@ const getGameDetails = async (appId: number): Promise<GameDetails> => {
       capsuleImage:
         appInfo.data.capsule_image ?? appInfo.data.header_image ?? "",
       steamUrl: `https://store.steampowered.com/app/${appId}`,
-    });
+    };
+
+    await setCachedJson(cacheKey, gameDetails);
+    return gameCache.set(cacheKey, gameDetails);
   });
 };
 
 export const rememberSelectedGame = async (
   game: Omit<CachedGame, "lastViewedAt">,
 ): Promise<CachedGame> =>
-  rememberPersistedGame({
+  rememberCachedGame({
     ...game,
     lastViewedAt: new Date().toISOString(),
   });
 
 export const getCachedGames = async (): Promise<CachedGame[]> => {
-  await loadPersistedGames();
-
+  const recentGames = await readRecentGames();
   for (const game of gameCache.values()) {
-    const existing = persistedGames.get(game.appId);
-    persistedGames.set(game.appId, {
+    const existing = recentGames.find((item) => item.appId === game.appId);
+    recentGames.push({
       ...toCachedGame(game),
       lastViewedAt: existing?.lastViewedAt ?? new Date().toISOString(),
     });
   }
 
   if (gameCache.values().length > 0) {
-    trimPersistedGames();
-    await persistGames();
+    const deduped = [...new Map(recentGames.map((g) => [g.appId, g])).values()]
+      .sort(compareByLastViewed)
+      .slice(0, MAX_RECENT_GAMES);
+    await setCachedJson(RECENT_GAMES_CACHE_KEY, deduped);
+    return deduped;
   }
 
-  return [...persistedGames.values()].sort(compareByLastViewed);
+  return recentGames.sort(compareByLastViewed).slice(0, MAX_RECENT_GAMES);
 };
 
 const getLanguageReviewStats = async (
@@ -422,6 +352,11 @@ const getLanguageReviewStats = async (
   const cached = reviewCache.get(cacheKey);
   if (cached) {
     return cached;
+  }
+
+  const redisCached = await getCachedJson<LanguageReviewStats>(cacheKey);
+  if (redisCached) {
+    return reviewCache.set(cacheKey, redisCached);
   }
 
   return dedupe(cacheKey, async () => {
@@ -440,7 +375,7 @@ const getLanguageReviewStats = async (
     const positive = response.query_summary.total_positive ?? 0;
     const negative = response.query_summary.total_negative ?? 0;
 
-    return reviewCache.set(cacheKey, {
+    const stats = {
       language,
       label: toLanguageLabel(language),
       reviewScore: response.query_summary.review_score ?? 0,
@@ -453,28 +388,29 @@ const getLanguageReviewStats = async (
         totalReviews === 0
           ? 0
           : Number(((positive / totalReviews) * 100).toFixed(1)),
-    });
+    };
+
+    await setCachedJson(cacheKey, stats);
+    return reviewCache.set(cacheKey, stats);
   });
 };
 
 export const getReviewAnalytics = async (
   appId: number,
 ): Promise<ReviewAnalytics> => {
-  await loadPersistedAnalytics();
-
   const analyticsCacheKey = `analytics:${appId}`;
   const cachedAnalytics = analyticsCache.get(analyticsCacheKey);
   if (cachedAnalytics) {
     return cachedAnalytics;
   }
 
-  const persisted = persistedAnalytics.get(appId);
-  if (persisted) {
-    return analyticsCache.set(analyticsCacheKey, persisted);
+  const redisCached = await getCachedJson<ReviewAnalytics>(analyticsCacheKey);
+  if (redisCached) {
+    return analyticsCache.set(analyticsCacheKey, redisCached);
   }
 
   const game = await getGameDetails(appId);
-  await rememberPersistedGame(toCachedGame(game));
+  await rememberCachedGame(toCachedGame(game));
   const languages = STEAM_LANGUAGE_DEFINITIONS.map((definition) => definition.id);
   const languageStats = await withConcurrencyLimit(
     languages.map((language) => () => getLanguageReviewStats(appId, language)),

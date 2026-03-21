@@ -5,7 +5,8 @@ const favicon = Bun.file("fav.png");
 
 Bun.serve({
   fetch(req, server) {
-    if (new URL(req.url).pathname === "/favicon.png") {
+    const pathname = new URL(req.url).pathname;
+    if (pathname === "/favicon.png" || pathname === "/og-image.png") {
       return new Response(favicon, { headers: { "Content-Type": "image/png" } });
     }
     const ip = server.requestIP(req);
