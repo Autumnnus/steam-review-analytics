@@ -18,21 +18,39 @@ import { Layout } from "./views/layout";
 
 export const app = new Hono();
 
+const normalizeIp = (value: string) => value.trim().replace(/^::ffff:/, "");
+
+const isPrivateIp = (value: string) => {
+  const ip = normalizeIp(value);
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "localhost" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+  );
+};
+
 const resolveClientIp = (c: Context) => {
-  const cfConnectingIp = (c.req.header("cf-connecting-ip") || "").trim();
+  const cfConnectingIp = normalizeIp(c.req.header("cf-connecting-ip") || "");
   if (cfConnectingIp) return cfConnectingIp;
 
-  const trueClientIp = (c.req.header("true-client-ip") || "").trim();
+  const trueClientIp = normalizeIp(c.req.header("true-client-ip") || "");
   if (trueClientIp) return trueClientIp;
-
-  const xRealIp = (c.req.header("x-real-ip") || "").trim();
-  if (xRealIp) return xRealIp;
 
   const xForwardedFor = (c.req.header("x-forwarded-for") || "")
     .split(",")
-    .map((value: string) => value.trim())
+    .map((value: string) => normalizeIp(value))
     .filter(Boolean);
-  return xForwardedFor[0] || "";
+  const firstPublicForwardedIp = xForwardedFor.find((value) => !isPrivateIp(value));
+  if (firstPublicForwardedIp) return firstPublicForwardedIp;
+  if (xForwardedFor[0]) return xForwardedFor[0];
+
+  const xRealIp = normalizeIp(c.req.header("x-real-ip") || "");
+  if (xRealIp) return xRealIp;
+
+  return "";
 };
 
 const copyHeaderIfPresent = (
