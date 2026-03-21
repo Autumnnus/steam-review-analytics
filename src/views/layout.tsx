@@ -550,7 +550,7 @@ export const Layout: FC<LayoutProps> = ({
           umamiProxied ? (
             // Dynamically inject tracker to avoid ad blocker element-selector rules (e.g. script[data-website-id])
             <script dangerouslySetInnerHTML={{ __html:
-              `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.async=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');document.head.appendChild(s);})();`
+              `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.async=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');s.setAttribute('data-host-url',window.location.origin);document.head.appendChild(s);})();`
             }} />
           ) : (
             <script
