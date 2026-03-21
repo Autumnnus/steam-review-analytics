@@ -13,10 +13,10 @@ RUN chmod +x /app/docker-entrypoint.sh
 
 ENV NODE_ENV=production
 ENV REDIS_URL=redis://127.0.0.1:6379
-ENV PORT=3099
-EXPOSE 3099
+ENV PORT=3010
+EXPOSE 3010
 
 HEALTHCHECK --interval=3s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -fs http://localhost:${PORT:-3099}/health || exit 1
+  CMD curl -fs http://localhost:${PORT:-3010}/health || exit 1
 
 CMD ["/app/docker-entrypoint.sh"]
