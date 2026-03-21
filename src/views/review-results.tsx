@@ -50,9 +50,6 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
     return lb!.positiveRatio - la!.positiveRatio;
   });
   const langWithData = analytics.languages.filter((l) => l.totalReviews > 0);
-  const maxRatioVal = langWithData.length
-    ? Math.max(...langWithData.map((l) => l.positive / l.totalReviews))
-    : -1;
   const maxReviewsVal = langWithData.length
     ? Math.max(...langWithData.map((l) => l.totalReviews))
     : -1;
@@ -204,6 +201,9 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
               Reviews<span data-sort-indicator> ↓</span>
             </button>
           </div>
+          <p class="mb-3 text-xs text-mist/45">
+            Bar fill follows the active sort metric.
+          </p>
           <div id={`${scopeId}-breakdown`} class="space-y-1">
             {sortedDefinitions.map((definition) => {
               const language = languageMap.get(definition.id);
@@ -213,7 +213,12 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
               const positiveRatio = hasData
                 ? Math.round((positive / totalReviews) * 100)
                 : 0;
-              const barColor =
+              const reviewWidth =
+                hasData && maxReviewsVal > 0
+                  ? Math.round((totalReviews / maxReviewsVal) * 100)
+                  : 0;
+              const isRatioSort = false;
+              const ratioBarColor =
                 positiveRatio >= 80
                   ? "bg-emerald-500"
                   : positiveRatio >= 60
@@ -221,9 +226,28 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
                     : positiveRatio >= 40
                       ? "bg-amber-400"
                       : "bg-rose-500";
-              const isCrownRatio =
-                hasData &&
-                Math.abs(positive / totalReviews - maxRatioVal) < 1e-9;
+              const reviewBarColor =
+                reviewWidth >= 80
+                  ? "bg-sky-400"
+                  : reviewWidth >= 50
+                    ? "bg-sky-500"
+                    : "bg-sky-600";
+              const reviewTextColor =
+                reviewWidth >= 80
+                  ? "text-sky-300"
+                  : reviewWidth >= 50
+                    ? "text-sky-400"
+                    : "text-sky-500";
+              const barColor = isRatioSort ? ratioBarColor : reviewBarColor;
+              const barWidth = isRatioSort ? positiveRatio : reviewWidth;
+              const ratioTextColor =
+                positiveRatio >= 80
+                  ? "text-emerald-300"
+                  : positiveRatio >= 60
+                    ? "text-lime-300"
+                    : positiveRatio >= 40
+                      ? "text-amber-300"
+                      : "text-rose-300";
               const isCrownReviews = hasData && totalReviews === maxReviewsVal;
 
               return (
@@ -232,9 +256,15 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
                     <div class="min-w-0 text-sm font-medium text-white">
                       {definition.flag} {definition.label}
                     </div>
-                    <div class="shrink-0 font-mono text-xs text-mist/55">
-                      {hasData ? `${positiveRatio}%` : "—"}
-                      {isCrownRatio ? (
+                    <div class="shrink-0 font-mono text-xs">
+                      {hasData ? (
+                        <span class={reviewTextColor}>
+                          {formatNumber.format(totalReviews)}
+                        </span>
+                      ) : (
+                        <span class="text-mist/55">—</span>
+                      )}
+                      {isCrownReviews ? (
                         <span class="ml-0.5 text-amber-400 text-[11px] leading-none">
                           👑
                         </span>
@@ -246,22 +276,17 @@ export const ReviewResults = ({ analytics }: ReviewResultsProps) => {
                       {hasData ? (
                         <div
                           class={`h-full rounded-full ${barColor}`}
-                          style={`width:${positiveRatio}%`}
+                          style={`width:${barWidth}%`}
                         ></div>
                       ) : null}
                     </div>
                   </div>
-                  <div class="mt-2 inline-flex items-center gap-0.5 text-left font-mono text-sm tabular-nums text-white">
+                  <div class="mt-2 text-left font-mono text-sm tabular-nums">
                     {hasData ? (
-                      `${formatNumber.format(totalReviews)} reviews`
+                      <span class={ratioTextColor}>{positiveRatio}% positive</span>
                     ) : (
                       <span class="text-mist/30">No reviews</span>
                     )}
-                    {isCrownReviews ? (
-                      <span class="text-amber-400 text-[11px] leading-none">
-                        👑
-                      </span>
-                    ) : null}
                   </div>
                 </div>
               );

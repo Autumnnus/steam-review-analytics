@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { FC, PropsWithChildren } from "hono/jsx";
-import { STEAM_LANGUAGE_DEFINITIONS, UMAMI_SCRIPT_URL, UMAMI_WEBSITE_ID } from "../config";
+import { STEAM_LANGUAGE_DEFINITIONS, UMAMI_SCRIPT_URL, UMAMI_BASE_URL, UMAMI_WEBSITE_ID, SITE_URL } from "../config";
 
 type LayoutProps = PropsWithChildren<{
   title?: string;
@@ -11,6 +11,7 @@ export const Layout: FC<LayoutProps> = ({
   title = "Steam Review Analytics",
 }) => {
   const hasUmami = Boolean(UMAMI_SCRIPT_URL && UMAMI_WEBSITE_ID);
+  const umamiProxied = hasUmami && Boolean(UMAMI_BASE_URL);
   const languageLabels = JSON.stringify(
     Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.label])),
   ).replace(/</g, "\\u003c");
@@ -229,22 +230,36 @@ export const Layout: FC<LayoutProps> = ({
           .map((item) => {
             const hasData = item.totalReviews > 0;
             const ratio = hasData ? Math.round((item.positive / item.totalReviews) * 100) : 0;
-            const barColor = ratio >= 80 ? 'bg-emerald-500' : ratio >= 60 ? 'bg-lime-400' : ratio >= 40 ? 'bg-amber-400' : 'bg-rose-500';
+            const reviewWidth = hasData && maxReviewsVal > 0 ? Math.round((item.totalReviews / maxReviewsVal) * 100) : 0;
+            const isRatioSort = sortState.col === 'ratio';
+            const ratioBarColor = ratio >= 80 ? 'bg-emerald-500' : ratio >= 60 ? 'bg-lime-400' : ratio >= 40 ? 'bg-amber-400' : 'bg-rose-500';
+            const reviewBarColor = reviewWidth >= 80 ? 'bg-sky-400' : reviewWidth >= 50 ? 'bg-sky-500' : 'bg-sky-600';
+            const reviewTextColor = reviewWidth >= 80 ? 'text-sky-300' : reviewWidth >= 50 ? 'text-sky-400' : 'text-sky-500';
+            const barColor = isRatioSort ? ratioBarColor : reviewBarColor;
+            const barWidth = isRatioSort ? ratio : reviewWidth;
+            const ratioTextColor = ratio >= 80 ? 'text-emerald-300' : ratio >= 60 ? 'text-lime-300' : ratio >= 40 ? 'text-amber-300' : 'text-rose-300';
             const isCrownRatio = hasData && Math.abs(item.positive / item.totalReviews - maxRatioVal) < 1e-9;
             const isCrownReviews = hasData && item.totalReviews === maxReviewsVal;
-            const reviewsHtml = hasData
-              ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews\${isCrownReviews ? crown : ''}</span>\`
+            const primaryMetricHtml = hasData
+              ? (isRatioSort
+                ? \`\${ratio}%\${isCrownRatio ? crown : ''}\`
+                : \`<span class="\${reviewTextColor}">\${item.totalReviews.toLocaleString('en-US')}</span>\${isCrownReviews ? crown : ''}\`)
+              : '—';
+            const secondaryMetricHtml = hasData
+              ? (isRatioSort
+                ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews</span>\`
+                : \`<span class="inline-flex items-center text-sm font-mono tabular-nums \${ratioTextColor}">\${ratio}% positive</span>\`)
               : \`<span class="text-sm text-mist/30">No reviews</span>\`;
             const flagText = item.flag ? item.flag + ' ' : '';
             return \`<div class="rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 text-sm font-medium text-white">\${flagText}\${item.label}</div>
-                <div class="shrink-0 font-mono text-xs text-mist/55">\${hasData ? ratio + '%' : '—'}\${isCrownRatio ? crown : ''}</div>
+                <div class="shrink-0 font-mono text-xs text-mist/55">\${primaryMetricHtml}</div>
               </div>
               <div class="mt-2 flex items-center gap-2 min-w-0">
-                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full \${barColor}" style="width:\${ratio}%"></div>\` : ''}</div>
+                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full \${barColor}" style="width:\${barWidth}%"></div>\` : ''}</div>
               </div>
-              <div class="mt-2 text-left">\${reviewsHtml}</div>
+              <div class="mt-2 text-left">\${secondaryMetricHtml}</div>
             </div>\`;
           })
           .join('');
@@ -532,11 +547,21 @@ export const Layout: FC<LayoutProps> = ({
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
         {hasUmami ? (
-          <script
-            defer
-            data-website-id={UMAMI_WEBSITE_ID}
-            src={UMAMI_SCRIPT_URL}
-          />
+          umamiProxied ? (
+            <script
+              defer
+              data-website-id={UMAMI_WEBSITE_ID}
+              data-host-url={SITE_URL}
+              data-api-route="/ux/collect"
+              src="/ux/tracker.js"
+            />
+          ) : (
+            <script
+              defer
+              data-website-id={UMAMI_WEBSITE_ID}
+              src={UMAMI_SCRIPT_URL}
+            />
+          )
         ) : null}
         <style>{`
           *, *::before, *::after {

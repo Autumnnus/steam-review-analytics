@@ -16,7 +16,7 @@ ENV REDIS_URL=redis://127.0.0.1:6379
 ENV PORT=3099
 EXPOSE 3099
 
-HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=3 \
+HEALTHCHECK --interval=3s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -fs http://localhost:${PORT:-3099}/health || exit 1
 
 CMD ["/app/docker-entrypoint.sh"]

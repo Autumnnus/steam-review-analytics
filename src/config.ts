@@ -8,6 +8,9 @@ export const SITE_URL =
   Bun.env.SITE_URL?.trim().replace(/\/+$/, "") || `http://localhost:${PORT}`;
 export const UMAMI_SCRIPT_URL = Bun.env.UMAMI_SCRIPT_URL?.trim() || "";
 export const UMAMI_WEBSITE_ID = Bun.env.UMAMI_WEBSITE_ID?.trim() || "";
+export const UMAMI_BASE_URL = UMAMI_SCRIPT_URL
+  ? new URL(UMAMI_SCRIPT_URL).origin
+  : "";
 
 export const STEAM_LANGUAGE_DEFINITIONS = [
   { id: "arabic", label: "Arabic", flag: "🇸🇦", aliases: ["arabic"] },
