@@ -13,12 +13,16 @@ export const Layout: FC<LayoutProps> = ({
   const languageLabels = JSON.stringify(
     Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.label])),
   ).replace(/</g, "\\u003c");
+  const languageFlags = JSON.stringify(
+    Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.flag])),
+  ).replace(/</g, "\\u003c");
   const bootstrap = `
     window.reviewCharts = window.reviewCharts || new Map();
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
     window.lastReviewSortState = window.lastReviewSortState || { col: 'reviews', dir: 'desc' };
     window.reviewLanguageLabels = ${languageLabels};
+    window.reviewLanguageFlags = ${languageFlags};
     window.renderCachedGameCard = (game) => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -134,8 +138,16 @@ export const Layout: FC<LayoutProps> = ({
       const payloadByLanguage = new Map(payload.languages.map((item) => [item.language, item]));
       const selectedList = selectedLanguages;
       const filteredLanguages = selectedList.map((languageId) => {
+        const flag =
+          (window.reviewLanguageFlags && window.reviewLanguageFlags[languageId]) || '';
         const existing = payloadByLanguage.get(languageId);
-        if (existing) return existing;
+        if (existing) {
+          return {
+            ...existing,
+            label: window.reviewLanguageLabels[languageId] || existing.label || languageId,
+            flag,
+          };
+        }
         return {
           language: languageId,
           label: window.reviewLanguageLabels[languageId] || languageId,
@@ -144,7 +156,8 @@ export const Layout: FC<LayoutProps> = ({
           positive: 0,
           negative: 0,
           totalReviews: 0,
-          positiveRatio: 0
+          positiveRatio: 0,
+          flag,
         };
       });
       return {
@@ -215,9 +228,10 @@ export const Layout: FC<LayoutProps> = ({
             const reviewsHtml = hasData
               ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews\${isCrownReviews ? crown : ''}</span>\`
               : \`<span class="text-sm text-mist/30">No reviews</span>\`;
+            const flagText = item.flag ? item.flag + ' ' : '';
             return \`<div class="rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-3">
               <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 text-sm font-medium text-white">\${item.label}</div>
+                <div class="min-w-0 text-sm font-medium text-white">\${flagText}\${item.label}</div>
                 <div class="shrink-0 font-mono text-xs text-mist/55">\${hasData ? ratio + '%' : '—'}\${isCrownRatio ? crown : ''}</div>
               </div>
               <div class="mt-2 flex items-center gap-2 min-w-0">
