@@ -53,6 +53,7 @@ export const HomePage = ({
                   hx-swap="innerHTML"
                   hx-indicator="#search-loading-indicator"
                   hx-include="#app-search-input"
+                  hx-params="term"
                   name="term"
                   value=""
                   required
@@ -61,7 +62,7 @@ export const HomePage = ({
                 <input
                   type="hidden"
                   name="appId"
-                  value={initialAppId}
+                  value={initialAppId || ""}
                   data-app-id-input="true"
                 />
                 <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">

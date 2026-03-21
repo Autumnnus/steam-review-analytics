@@ -71,13 +71,14 @@ export const Layout: FC<LayoutProps> = ({
       const appIdInput = document.querySelector('[data-app-id-input="true"]');
       const searchInput = document.querySelector('[data-app-search-input="true"]');
       const suggestionsRoot = document.querySelector('[data-search-suggestions="true"]');
-      if (appIdInput) appIdInput.value = appId;
+      const safeAppId = typeof appId === 'string' ? appId : String(appId || '');
+      if (appIdInput) appIdInput.value = safeAppId;
       if (searchInput) {
         searchInput.value = appName;
         searchInput.setCustomValidity('');
       }
       if (suggestionsRoot) suggestionsRoot.innerHTML = '';
-      window.updateSelectedAppLabel(appId, appName);
+      window.updateSelectedAppLabel(safeAppId, appName);
     };
     window.runAnalyticsForSelectedGame = () => {
       const form = document.getElementById('analytics-form');
