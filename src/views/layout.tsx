@@ -42,7 +42,7 @@ export const Layout: FC<LayoutProps> = ({
     window.normalizeTrackingValue = (value) =>
       String(value || '')
         .replace(/[<>\`"'\\\\]/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/\\s+/g, ' ')
         .trim()
         .slice(0, 120);
     window.trackEvent = (name, data = {}) => {
