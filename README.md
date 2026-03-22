@@ -25,7 +25,7 @@ Set these values in `.env` before running the app:
 - `SITE_URL` for canonical URLs, `robots.txt`, and `sitemap.xml`
 - `REDIS_URL` if you want to point at a remote Redis instance
 - `PORT` if you want to change the default `3010`
-- `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID` for Umami tracking (optional)
+- `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID` for Umami (optional)
 
 ## Run
 
@@ -51,16 +51,6 @@ The app runs at `http://localhost:3010` by default.
 - `GET /search?term=portal` Steam autocomplete fragment
 - `GET /robots.txt` crawler rules
 - `GET /sitemap.xml` sitemap
-
-## Traffic Tracking (Umami)
-
-- Add `UMAMI_SCRIPT_URL` and `UMAMI_WEBSITE_ID` in `.env` to enable tracking.
-- `UMAMI_SCRIPT_URL` must match your Umami `TRACKER_SCRIPT_NAME` (example: `.../x.js` if tracker name is `x.js`).
-- `SITE_URL` must be your public app URL in production. Do not leave it as `localhost` on a server deployment.
-- The app emits custom Umami events:
-  - `search_select_game` with `appId`, `gameName`, and `source`
-  - `analyze_submit` with `appId`, `gameName`, and `selectedLanguageCount`
-  - `analyze_success` with `appId` and `gameName`
 
 ## Cache Behavior
 
