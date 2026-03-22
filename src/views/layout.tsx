@@ -38,6 +38,13 @@ export const Layout: FC<LayoutProps> = ({
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
     window.lastReviewSortState = window.lastReviewSortState || { col: 'reviews', dir: 'desc' };
+    window.selectedGame = window.selectedGame || { appId: '', appName: '' };
+    window.normalizeTrackingValue = (value) =>
+      String(value || '')
+        .replace(/[<>\`"'\\\\]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
     window.trackEvent = (name, data = {}) => {
       if (!(window.umami && typeof window.umami.track === 'function')) return;
       try {
@@ -100,13 +107,15 @@ export const Layout: FC<LayoutProps> = ({
       const searchInput = document.querySelector('[data-app-search-input="true"]');
       const suggestionsRoot = document.querySelector('[data-search-suggestions="true"]');
       const safeAppId = typeof appId === 'string' ? appId : String(appId || '');
+      const safeAppName = window.normalizeTrackingValue(appName);
       if (appIdInput) appIdInput.value = safeAppId;
       if (searchInput) {
-        searchInput.value = appName;
+        searchInput.value = safeAppName;
         searchInput.setCustomValidity('');
       }
       if (suggestionsRoot) suggestionsRoot.innerHTML = '';
-      window.updateSelectedAppLabel(safeAppId, appName);
+      window.selectedGame = { appId: safeAppId, appName: safeAppName };
+      window.updateSelectedAppLabel(safeAppId, safeAppName);
     };
     window.runAnalyticsForSelectedGame = () => {
       const form = document.getElementById('analytics-form');
@@ -407,7 +416,11 @@ export const Layout: FC<LayoutProps> = ({
         const appName = suggestion.getAttribute('data-app-name') || '';
         const imageUrl = suggestion.getAttribute('data-app-image-url') || '';
         window.selectGame(appId, appName);
-        window.trackEvent('search_select_game', { source: 'suggestion', appId });
+        window.trackEvent('search_select_game', {
+          source: 'suggestion',
+          appId,
+          gameName: window.normalizeTrackingValue(appName),
+        });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -424,7 +437,11 @@ export const Layout: FC<LayoutProps> = ({
         const appId = cachedGame.getAttribute('data-app-id') || '';
         const appName = cachedGame.getAttribute('data-app-name') || '';
         window.selectGame(appId, appName);
-        window.trackEvent('search_select_game', { source: 'recent_games', appId });
+        window.trackEvent('search_select_game', {
+          source: 'recent_games',
+          appId,
+          gameName: window.normalizeTrackingValue(appName),
+        });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -458,6 +475,7 @@ export const Layout: FC<LayoutProps> = ({
       if (!(event.target && event.target.matches('[data-app-search-input="true"]'))) return;
       const appIdInput = document.querySelector('[data-app-id-input="true"]');
       if (appIdInput) appIdInput.value = '';
+      window.selectedGame = { appId: '', appName: '' };
       event.target.setCustomValidity('');
       window.updateSelectedAppLabel('', '');
       const results = document.getElementById('results');
@@ -478,8 +496,10 @@ export const Layout: FC<LayoutProps> = ({
         searchInput.reportValidity();
         return;
       }
+      const selectedGame = window.selectedGame || { appId: '', appName: '' };
       window.trackEvent('analyze_submit', {
         appId: appIdInput ? appIdInput.value : '',
+        gameName: selectedGame.appName || (searchInput ? window.normalizeTrackingValue(searchInput.value) : ''),
         selectedLanguageCount: window.getSelectedLanguages().length,
       });
     });
@@ -511,7 +531,11 @@ export const Layout: FC<LayoutProps> = ({
         event.detail.target.querySelector('[data-review-scope]')
       ) {
         const appIdInput = document.querySelector('[data-app-id-input="true"]');
-        window.trackEvent('analyze_success', { appId: appIdInput ? appIdInput.value : '' });
+        const selectedGame = window.selectedGame || { appId: '', appName: '' };
+        window.trackEvent('analyze_success', {
+          appId: appIdInput ? appIdInput.value : '',
+          gameName: selectedGame.appName,
+        });
       }
     });
   `;
