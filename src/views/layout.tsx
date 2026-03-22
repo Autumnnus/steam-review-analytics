@@ -1,6 +1,11 @@
 /** @jsxImportSource hono/jsx */
 import type { FC, PropsWithChildren } from "hono/jsx";
-import { STEAM_LANGUAGE_DEFINITIONS } from "../config";
+import {
+  STEAM_LANGUAGE_DEFINITIONS,
+  UMAMI_BASE_URL,
+  UMAMI_SCRIPT_URL,
+  UMAMI_WEBSITE_ID,
+} from "../config";
 
 type LayoutProps = PropsWithChildren<{
   title?: string;
@@ -10,17 +15,35 @@ export const Layout: FC<LayoutProps> = ({
   children,
   title = "Steam Review Analytics",
 }) => {
+  const hasUmami = Boolean(UMAMI_SCRIPT_URL && UMAMI_WEBSITE_ID);
+  const umamiProxied = hasUmami && Boolean(UMAMI_BASE_URL);
   const languageLabels = JSON.stringify(
-    Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.label])),
+    Object.fromEntries(
+      STEAM_LANGUAGE_DEFINITIONS.map((language) => [
+        language.id,
+        language.label,
+      ]),
+    ),
   ).replace(/</g, "\\u003c");
   const languageFlags = JSON.stringify(
-    Object.fromEntries(STEAM_LANGUAGE_DEFINITIONS.map((language) => [language.id, language.flag])),
+    Object.fromEntries(
+      STEAM_LANGUAGE_DEFINITIONS.map((language) => [
+        language.id,
+        language.flag,
+      ]),
+    ),
   ).replace(/</g, "\\u003c");
   const bootstrap = `
     window.reviewCharts = window.reviewCharts || new Map();
     window.reviewPayloads = window.reviewPayloads || new Map();
     window.reviewSortStates = window.reviewSortStates || new Map();
     window.lastReviewSortState = window.lastReviewSortState || { col: 'reviews', dir: 'desc' };
+    window.trackEvent = (name, data = {}) => {
+      if (!(window.umami && typeof window.umami.track === 'function')) return;
+      try {
+        window.umami.track(name, data);
+      } catch (_) {}
+    };
     window.reviewLanguageLabels = ${languageLabels};
     window.reviewLanguageFlags = ${languageFlags};
     window.renderCachedGameCard = (game) => {
@@ -222,22 +245,36 @@ export const Layout: FC<LayoutProps> = ({
           .map((item) => {
             const hasData = item.totalReviews > 0;
             const ratio = hasData ? Math.round((item.positive / item.totalReviews) * 100) : 0;
-            const barColor = ratio >= 80 ? 'bg-emerald-500' : ratio >= 60 ? 'bg-lime-400' : ratio >= 40 ? 'bg-amber-400' : 'bg-rose-500';
+            const reviewWidth = hasData && maxReviewsVal > 0 ? Math.round((item.totalReviews / maxReviewsVal) * 100) : 0;
+            const isRatioSort = sortState.col === 'ratio';
+            const ratioBarColor = ratio >= 80 ? '#10b981' : ratio >= 60 ? '#a3e635' : ratio >= 40 ? '#fbbf24' : '#f43f5e';
+            const reviewBarColor = reviewWidth >= 80 ? '#38bdf8' : reviewWidth >= 50 ? '#0ea5e9' : '#0284c7';
+            const reviewTextColor = reviewWidth >= 80 ? '#7dd3fc' : reviewWidth >= 50 ? '#38bdf8' : '#0ea5e9';
+            const barColor = isRatioSort ? ratioBarColor : reviewBarColor;
+            const barWidth = isRatioSort ? ratio : reviewWidth;
+            const ratioTextColor = ratio >= 80 ? '#6ee7b7' : ratio >= 60 ? '#bef264' : ratio >= 40 ? '#fcd34d' : '#fda4af';
             const isCrownRatio = hasData && Math.abs(item.positive / item.totalReviews - maxRatioVal) < 1e-9;
             const isCrownReviews = hasData && item.totalReviews === maxReviewsVal;
-            const reviewsHtml = hasData
-              ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews\${isCrownReviews ? crown : ''}</span>\`
+            const primaryMetricHtml = hasData
+              ? (isRatioSort
+                ? \`\${ratio}%\${isCrownRatio ? crown : ''}\`
+                : \`<span style="color:\${reviewTextColor}">\${item.totalReviews.toLocaleString('en-US')}</span>\${isCrownReviews ? crown : ''}\`)
+              : '—';
+            const secondaryMetricHtml = hasData
+              ? (isRatioSort
+                ? \`<span class="inline-flex items-center gap-0.5 text-sm font-mono tabular-nums text-white">\${item.totalReviews.toLocaleString('en-US')} reviews</span>\`
+                : \`<span class="inline-flex items-center text-sm font-mono tabular-nums" style="color:\${ratioTextColor}">\${ratio}% positive</span>\`)
               : \`<span class="text-sm text-mist/30">No reviews</span>\`;
             const flagText = item.flag ? item.flag + ' ' : '';
             return \`<div class="rounded-xl border border-white/[0.07] bg-ink/40 px-3 py-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 text-sm font-medium text-white">\${flagText}\${item.label}</div>
-                <div class="shrink-0 font-mono text-xs text-mist/55">\${hasData ? ratio + '%' : '—'}\${isCrownRatio ? crown : ''}</div>
+                <div class="shrink-0 font-mono text-xs text-mist/55">\${primaryMetricHtml}</div>
               </div>
               <div class="mt-2 flex items-center gap-2 min-w-0">
-                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full \${barColor}" style="width:\${ratio}%"></div>\` : ''}</div>
+                <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">\${hasData ? \`<div class="h-full rounded-full" style="width:\${barWidth}%;background-color:\${barColor}"></div>\` : ''}</div>
               </div>
-              <div class="mt-2 text-left">\${reviewsHtml}</div>
+              <div class="mt-2 text-left">\${secondaryMetricHtml}</div>
             </div>\`;
           })
           .join('');
@@ -370,6 +407,7 @@ export const Layout: FC<LayoutProps> = ({
         const appName = suggestion.getAttribute('data-app-name') || '';
         const imageUrl = suggestion.getAttribute('data-app-image-url') || '';
         window.selectGame(appId, appName);
+        window.trackEvent('search_select_game', { source: 'suggestion', appId });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -386,6 +424,7 @@ export const Layout: FC<LayoutProps> = ({
         const appId = cachedGame.getAttribute('data-app-id') || '';
         const appName = cachedGame.getAttribute('data-app-name') || '';
         window.selectGame(appId, appName);
+        window.trackEvent('search_select_game', { source: 'recent_games', appId });
         if (appId && appName) {
           window.saveCachedGame({
             appId: Number(appId),
@@ -437,7 +476,12 @@ export const Layout: FC<LayoutProps> = ({
         event.preventDefault();
         searchInput.setCustomValidity('Select a game from the autocomplete list.');
         searchInput.reportValidity();
+        return;
       }
+      window.trackEvent('analyze_submit', {
+        appId: appIdInput ? appIdInput.value : '',
+        selectedLanguageCount: window.getSelectedLanguages().length,
+      });
     });
     document.addEventListener('DOMContentLoaded', () => {
       window.syncLanguageCount();
@@ -460,6 +504,15 @@ export const Layout: FC<LayoutProps> = ({
         results.style.transition = '';
       }
       window.hydrateReviewResults(event.target);
+      if (
+        event.detail &&
+        event.detail.target &&
+        event.detail.target.id === 'results' &&
+        event.detail.target.querySelector('[data-review-scope]')
+      ) {
+        const appIdInput = document.querySelector('[data-app-id-input="true"]');
+        window.trackEvent('analyze_success', { appId: appIdInput ? appIdInput.value : '' });
+      }
     });
   `;
 
@@ -475,7 +528,11 @@ export const Layout: FC<LayoutProps> = ({
           content="View Steam review analytics across every supported language for a game."
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
           rel="stylesheet"
@@ -508,6 +565,22 @@ export const Layout: FC<LayoutProps> = ({
         />
         <script src="https://unpkg.com/htmx.org@1.9.12"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        {hasUmami ? (
+          umamiProxied ? (
+            // Dynamically inject tracker to avoid ad blocker element-selector rules (e.g. script[data-website-id])
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(function(){var s=document.createElement('script');s.src='/ux/tracker.js';s.async=true;s.setAttribute('data-website-id','${UMAMI_WEBSITE_ID}');s.setAttribute('data-host-url',window.location.origin);document.head.appendChild(s);})();`,
+              }}
+            />
+          ) : (
+            <script
+              defer
+              data-website-id={UMAMI_WEBSITE_ID}
+              src={UMAMI_SCRIPT_URL}
+            />
+          )
+        ) : null}
         <style>{`
           *, *::before, *::after {
             box-sizing: border-box;
